@@ -1,3 +1,3 @@
 # rustic-sql 🦀
 
-> wooo!
+> woooo!
