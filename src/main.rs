@@ -1,5 +1,5 @@
-use crate::query::validate_query_string;
 use files::validate_path;
+use query::validate_query_string;
 use std::env;
 use std::error::Error;
 
@@ -10,14 +10,14 @@ mod query;
 fn main() -> Result<(), Box<dyn Error>> {
     let args = env::args().collect();
     if let Err(e) = run(args) {
-        eprintln!("{}", e);
+        println!("{}", e);
     }
     Ok(())
 }
 
 fn run(args: Vec<String>) -> Result<(), Box<dyn Error>> {
     if args.len() < 3 {
-        eprintln!("invalid usage of rustic-sql");
+        println!("invalid usage of rustic-sql");
         return Err("usage: cargo run -- <path-to-tables> <sql-query>".into());
     }
 
