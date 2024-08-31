@@ -8,15 +8,13 @@ mod files;
 mod query;
 
 fn main() -> Result<(), Box<dyn Error>> {
-
     if let Err(e) = run(env::args().collect()) {
         eprintln!("{}", e);
     }
     Ok(())
 }
 
-fn run(args: Vec<String>) ->  Result<(), Box<dyn Error>> {
-    
+fn run(args: Vec<String>) -> Result<(), Box<dyn Error>> {
     if args.len() < 3 {
         eprintln!("invalid usage of rustic-sql");
         return Err("usage: cargo run -- <path-to-tables> <sql-query>".into());
