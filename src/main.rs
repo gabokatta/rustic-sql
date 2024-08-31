@@ -8,7 +8,8 @@ mod files;
 mod query;
 
 fn main() -> Result<(), Box<dyn Error>> {
-    if let Err(e) = run(env::args().collect()) {
+    let args = env::args().collect();
+    if let Err(e) = run(args) {
         eprintln!("{}", e);
     }
     Ok(())
