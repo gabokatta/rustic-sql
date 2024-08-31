@@ -2,7 +2,7 @@ use std::error::Error;
 use std::fmt::{Debug, Display, Formatter};
 
 /// Generic Error for the RusticSQL Application.
-pub struct Errored(Box<dyn Error>);
+pub struct Errored(pub String);
 
 impl Error for Errored {}
 
@@ -14,6 +14,6 @@ impl Debug for Errored {
 
 impl Display for Errored {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "ERROR: {}", self.0)
+        write!(f, "[ERROR]: {}", self.0)
     }
 }
