@@ -1,4 +1,4 @@
-use crate::query::{Parser, Tokenizer};
+use crate::query::Tokenizer;
 use files::validate_path;
 use query::validate_query_string;
 use std::env;
@@ -17,7 +17,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 }
 
 fn run(args: Vec<String>) -> Result<(), Box<dyn Error>> {
-    if args.len() < 3 {
+    if args.len() != 3 {
         println!("invalid usage of rustic-sql");
         return Err("usage: cargo run -- <path-to-tables> <sql-query>".into());
     }
