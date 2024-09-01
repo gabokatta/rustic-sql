@@ -1,3 +1,4 @@
+use crate::query::{Parser, Tokenizer};
 use files::validate_path;
 use query::validate_query_string;
 use std::env;
@@ -26,7 +27,11 @@ fn run(args: Vec<String>) -> Result<(), Box<dyn Error>> {
 
     validate_path(path)?;
     validate_query_string(query)?;
-    dbg!(path, query);
 
+    let mut tokenizer = Tokenizer::new();
+    let tokens = tokenizer.tokenize(query)?;
+    for t in tokens {
+        println!("{:?}", t)
+    }
     Ok(())
 }
