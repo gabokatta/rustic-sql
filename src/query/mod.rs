@@ -50,7 +50,7 @@ impl Parser {
                             self.index += 1
                         } else if char.is_alphabetic() {
                             self.state = IdentifierOrKeyword
-                        } else if char.is_digit(10) {
+                        } else if char.is_ascii_digit() {
                             self.state = NumberLiteral
                         } else if char == '\'' {
                             self.state = StringLiteral;
