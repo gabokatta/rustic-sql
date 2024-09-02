@@ -14,9 +14,6 @@ pub struct Tokenizer {
 }
 
 #[derive(Debug)]
-pub struct Query {}
-
-#[derive(Debug)]
 pub struct Token {
     pub value: String,
     pub kind: TokenKind,
@@ -50,6 +47,9 @@ pub enum TokenKind {
     Keyword,
 }
 
+#[derive(Debug)]
+pub struct Query {}
+
 impl Tokenizer {
     pub fn new() -> Self {
         Self { i: 0, state: Begin }
@@ -66,7 +66,7 @@ impl Tokenizer {
                 Operator => token = self.tokenize_operator(sql)?,
                 NumberLiteral => token = self.tokenize_number(sql)?,
                 StringLiteral => {
-                    self.i += 1;
+                    self.i += c.len_utf8();
                     token = self.tokenize_quoted(sql)?;
                 }
                 Complete => {
@@ -84,7 +84,7 @@ impl Tokenizer {
 
     fn next_state(&mut self, c: char) -> Result<(), InvalidSQL> {
         match c {
-            c if can_be_skipped(c) => self.i += 1,
+            c if can_be_skipped(c) => self.i += c.len_utf8(),
             c if c.is_ascii_digit() => self.state = NumberLiteral,
             c if is_identifier_char(c) => self.state = IdentifierOrKeyword,
             '\'' => self.state = StringLiteral,
@@ -109,9 +109,13 @@ impl Tokenizer {
                 kind: Keyword,
             });
         }
-        while self.i < sql.len() && is_identifier_char(char_at(self.i, sql)) {
-            self.i += 1;
+
+        let mut c = char_at(self.i, sql);
+        while self.i < sql.len() && is_identifier_char(c) {
+            self.i += c.len_utf8();
+            c = char_at(self.i, sql);
         }
+
         let identifier = &sql[start..self.i];
         self.state = Complete;
         Ok(Token {
@@ -135,6 +139,43 @@ impl Tokenizer {
                 self.i
             )))
         }
+    }
+
+    fn tokenize_number(&mut self, sql: &str) -> Result<Token, InvalidSQL> {
+        let start = self.i;
+
+        let mut c = char_at(self.i, sql);
+        while self.i < sql.len() && c.is_ascii_digit() {
+            self.i += c.len_utf8();
+            c = char_at(self.i, sql);
+        }
+
+        let number = &sql[start..self.i];
+        self.state = Complete;
+        Ok(Token {
+            value: String::from(number),
+            kind: Number,
+        })
+    }
+
+    fn tokenize_quoted(&mut self, sql: &str) -> Result<Token, InvalidSQL> {
+        let start = self.i;
+        for (index, char) in sql[start..].char_indices() {
+            if char == '\'' {
+                self.i = start + index + 1;
+                let quoted = &sql[start..start + index];
+                self.state = Complete;
+                return Ok(Token {
+                    value: String::from(quoted),
+                    kind: TokenKind::String,
+                });
+            }
+        }
+
+        Err(Syntax(format!(
+            "unclosed quotation mark after index: {}",
+            start
+        )))
     }
 
     fn matches_keyword(&self, sql: &str) -> Option<String> {
@@ -164,48 +205,13 @@ impl Tokenizer {
         None
     }
 
-    fn tokenize_number(&mut self, sql: &str) -> Result<Token, InvalidSQL> {
-        let start = self.i;
-        while self.i < sql.len() && char_at(self.i, sql).is_ascii_digit() {
-            self.i += 1;
-        }
-        let number = &sql[start..self.i];
-        self.state = Complete;
-        Ok(Token {
-            value: String::from(number),
-            kind: Number,
-        })
-    }
-
-    fn tokenize_quoted(&mut self, sql: &str) -> Result<Token, InvalidSQL> {
-        let start = self.i;
-        for (index, char) in sql[start..].char_indices() {
-            if char == '\'' {
-                self.i = start + index + 1;
-                let quoted = &sql[start..start + index];
-                self.state = Complete;
-                return Ok(Token {
-                    value: String::from(quoted),
-                    kind: TokenKind::String,
-                });
-            }
-        }
-
-        Err(Syntax(format!(
-            "unclosed quotation mark after index: {}",
-            start
-        )))
-    }
-
     fn reset(&mut self) {
         self.state = Begin
     }
 }
 
 fn char_at(index: usize, string: &str) -> char {
-    let mut chars = string.chars();
-    let at_index = chars.nth(index);
-    at_index.unwrap_or('\0')
+    string[index..].chars().next().unwrap_or('\0')
 }
 
 fn can_be_skipped(c: char) -> bool {
