@@ -1,4 +1,4 @@
-use crate::query::Tokenizer;
+use crate::query::tokenizer::Tokenizer;
 use files::validate_path;
 use query::validate_query_string;
 use std::env;
