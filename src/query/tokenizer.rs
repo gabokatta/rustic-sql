@@ -2,10 +2,7 @@ use crate::query::errors::InvalidSQL;
 use crate::query::errors::InvalidSQL::Syntax;
 use crate::query::tokenizer::TokenizerState::*;
 use crate::query::TokenKind::{Identifier, Keyword, Number, Unknown};
-use crate::query::{
-    can_be_skipped, char_at, is_identifier_char, is_operator_char, reserved_keywords,
-    valid_operators, Token, TokenKind,
-};
+use crate::query::{Token, TokenKind};
 
 pub struct Tokenizer {
     i: usize,
@@ -180,4 +177,55 @@ impl Tokenizer {
     fn reset(&mut self) {
         self.state = Begin
     }
+}
+
+fn char_at(index: usize, string: &str) -> char {
+    string[index..].chars().next().unwrap_or('\0')
+}
+
+fn can_be_skipped(c: char) -> bool {
+    c.is_whitespace() || ignorable_chars().contains(&c)
+}
+
+fn is_identifier_char(c: char) -> bool {
+    c == '_' || c.is_alphanumeric() && !can_be_skipped(c)
+}
+
+fn is_operator_char(c: char) -> bool {
+    valid_operators().contains(&c.to_string())
+}
+
+fn valid_operators() -> Vec<String> {
+    vec![
+        "*".to_string(),
+        "=".to_string(),
+        "<".to_string(),
+        ">".to_string(),
+        ">=".to_string(),
+        "<=".to_string(),
+        "!=".to_string(),
+        "<>".to_string(),
+    ]
+}
+
+fn ignorable_chars() -> Vec<char> {
+    vec![' ', '(', ')', ',', ';', '\0', '\n']
+}
+
+fn reserved_keywords() -> Vec<String> {
+    vec![
+        "SELECT".to_string(),
+        "UPDATE".to_string(),
+        "DELETE".to_string(),
+        "INSERT INTO".to_string(),
+        "VALUES".to_string(),
+        "ORDER BY".to_string(),
+        "DESC".to_string(),
+        "ASC".to_string(),
+        "FROM".to_string(),
+        "WHERE".to_string(),
+        "AND".to_string(),
+        "OR".to_string(),
+        "NOT".to_string(),
+    ]
 }
