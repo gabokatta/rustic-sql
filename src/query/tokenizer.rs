@@ -28,7 +28,7 @@ impl Tokenizer {
 
     pub fn tokenize(&mut self, sql: &str) -> Result<Vec<Token>, InvalidSQL> {
         let mut out = vec![];
-        let mut token = Token::new();
+        let mut token = Token::default();
         while self.i < sql.len() {
             let c = char_at(self.i, sql);
             match self.state {
@@ -42,7 +42,7 @@ impl Tokenizer {
                 }
                 Complete => {
                     out.push(token);
-                    token = Token::new();
+                    token = Token::default();
                     self.reset()
                 }
             }
@@ -133,8 +133,9 @@ impl Tokenizer {
         let start = self.i;
         for (index, char) in sql[start..].char_indices() {
             if char == '\'' {
-                self.i = start + index + 1;
-                let quoted = &sql[start..start + index];
+                let end = start + index;
+                self.i = end + 1;
+                let quoted = &sql[start..end];
                 self.state = Complete;
                 return Ok(Token {
                     value: String::from(quoted),
