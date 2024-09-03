@@ -1,6 +1,16 @@
 use std::error::Error;
 use std::fmt::{Debug, Display, Formatter};
 
+#[macro_export]
+macro_rules! errored {
+    ($err_type:ident, $msg:expr) => {
+        return Err($err_type(format!($msg)))
+    };
+    ($err_type:ident, $fmt:expr, $($arg:tt)*) => {
+        return Err($err_type(format!($fmt, $($arg)*)))
+    };
+}
+
 /// Generic Error for the RusticSQL Application.
 pub struct Errored(pub String);
 

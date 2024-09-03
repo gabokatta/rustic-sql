@@ -1,3 +1,4 @@
+use crate::errored;
 use crate::query::errors::InvalidSQL;
 use crate::query::errors::InvalidSQL::Syntax;
 use crate::query::tokenizer::TokenizerState::*;
@@ -57,18 +58,12 @@ impl Tokenizer {
             c if is_identifier_char(c) => self.state = IdentifierOrKeyword,
             '\'' => self.state = StringLiteral,
             c if is_operator_char(c) => self.state = Operator,
-            _ => {
-                return Err(Syntax(format!(
-                    "could not tokenize char: {} at index: {}.",
-                    c, self.i
-                )))
-            }
+            _ => errored!(Syntax, "could not tokenize char: {} at index: {}.", c, self.i)
         }
         Ok(())
     }
 
     fn tokenize_identifier_or_keyword(&mut self, sql: &str) -> Result<Token, InvalidSQL> {
-        let start = self.i;
         if let Some(word) = self.matches_keyword(sql) {
             self.i += word.len();
             self.state = Complete;
@@ -77,19 +72,11 @@ impl Tokenizer {
                 kind: Keyword,
             });
         }
+        self.tokenize_kind(sql, Identifier, is_identifier_char)
+    }
 
-        let mut c = char_at(self.i, sql);
-        while self.i < sql.len() && is_identifier_char(c) {
-            self.i += c.len_utf8();
-            c = char_at(self.i, sql);
-        }
-
-        let identifier = &sql[start..self.i];
-        self.state = Complete;
-        Ok(Token {
-            value: String::from(identifier),
-            kind: Identifier,
-        })
+    fn tokenize_number(&mut self, sql: &str) -> Result<Token, InvalidSQL> {
+        self.tokenize_kind(sql, Number, |c| c.is_ascii_digit())
     }
 
     fn tokenize_operator(&mut self, sql: &str) -> Result<Token, InvalidSQL> {
@@ -101,29 +88,13 @@ impl Tokenizer {
                 kind: TokenKind::Operator,
             })
         } else {
-            Err(Syntax(format!(
+            errored!(
+                Syntax,
                 "unrecognized operator {} at index: {}",
                 char_at(self.i, sql),
                 self.i
-            )))
+            );
         }
-    }
-
-    fn tokenize_number(&mut self, sql: &str) -> Result<Token, InvalidSQL> {
-        let start = self.i;
-
-        let mut c = char_at(self.i, sql);
-        while self.i < sql.len() && c.is_ascii_digit() {
-            self.i += c.len_utf8();
-            c = char_at(self.i, sql);
-        }
-
-        let number = &sql[start..self.i];
-        self.state = Complete;
-        Ok(Token {
-            value: String::from(number),
-            kind: Number,
-        })
     }
 
     fn tokenize_quoted(&mut self, sql: &str) -> Result<Token, InvalidSQL> {
@@ -140,38 +111,60 @@ impl Tokenizer {
                 });
             }
         }
-
-        Err(Syntax(format!(
-            "unclosed quotation mark after index: {}",
-            start
-        )))
+        errored!(Syntax, "unclosed quotation mark after index: {start}");
     }
 
     fn matches_keyword(&self, sql: &str) -> Option<String> {
-        for word in reserved_keywords() {
-            let end = self.i + word.len();
+        self.matches_special_tokens(sql, &reserved_keywords(), is_identifier_char)
+    }
+
+    fn matches_operator(&self, sql: &str) -> Option<String> {
+        self.matches_special_tokens(sql, &valid_operators(), is_operator_char)
+    }
+
+    fn matches_special_tokens<F>(
+        &self,
+        sql: &str,
+        tokens: &[String],
+        matches_kind: F,
+    ) -> Option<String>
+    where
+        F: Fn(char) -> bool,
+    {
+        for t in tokens {
+            let end = self.i + t.len();
             if end <= sql.len() {
                 let token = &sql[self.i..end];
                 let next_char = char_at(end, sql);
-                if token.to_uppercase() == word.as_str() && !is_identifier_char(next_char) {
-                    return Some(word);
+                if token.to_uppercase() == t.to_uppercase() && !matches_kind(next_char) {
+                    return Some(token.to_uppercase());
                 }
             }
         }
         None
     }
 
-    fn matches_operator(&self, sql: &str) -> Option<String> {
-        for op in valid_operators() {
-            let end = self.i + op.len();
-            if end <= sql.len() {
-                let token = &sql[self.i..end];
-                if token == op.as_str() && !is_operator_char(char_at(end, sql)) {
-                    return Some(op);
-                }
-            }
+    fn tokenize_kind<F>(
+        &mut self,
+        sql: &str,
+        output_kind: TokenKind,
+        matches_kind: F,
+    ) -> Result<Token, InvalidSQL>
+    where
+        F: Fn(char) -> bool,
+    {
+        let start = self.i;
+        let mut c = char_at(self.i, sql);
+        while self.i < sql.len() && matches_kind(c) {
+            self.i += c.len_utf8();
+            c = char_at(self.i, sql);
         }
-        None
+        let token = &sql[start..self.i];
+        self.state = Complete;
+        Ok(Token {
+            value: String::from(token),
+            kind: output_kind,
+        })
     }
 
     fn reset(&mut self) {
