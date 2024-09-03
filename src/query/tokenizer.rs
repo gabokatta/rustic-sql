@@ -58,7 +58,12 @@ impl Tokenizer {
             c if is_identifier_char(c) => self.state = IdentifierOrKeyword,
             '\'' => self.state = StringLiteral,
             c if is_operator_char(c) => self.state = Operator,
-            _ => errored!(Syntax, "could not tokenize char: {} at index: {}.", c, self.i)
+            _ => errored!(
+                Syntax,
+                "could not tokenize char: {} at index: {}.",
+                c,
+                self.i
+            ),
         }
         Ok(())
     }
