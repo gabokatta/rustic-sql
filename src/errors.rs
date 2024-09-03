@@ -1,5 +1,6 @@
 use std::error::Error;
 use std::fmt::{Debug, Display, Formatter};
+use std::io;
 
 #[macro_export]
 macro_rules! errored {
@@ -25,5 +26,11 @@ impl Debug for Errored {
 impl Display for Errored {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "[ERROR]: {}", self.0)
+    }
+}
+
+impl From<io::Error> for Errored {
+    fn from(value: io::Error) -> Self {
+        Errored(format!("IO Error: {}", value))
     }
 }

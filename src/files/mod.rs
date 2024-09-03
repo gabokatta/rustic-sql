@@ -7,16 +7,11 @@ pub fn validate_path(dir: &str) -> Result<(), Errored> {
 
     if !path.exists() {
         errored!(Errored, "path '{dir}' does not exist");
-    }
-    if !path.is_dir() {
+    } else if !path.is_dir() {
         errored!(Errored, "path '{dir}' is not a valid directory");
-    }
-
-    let dir_entries = path
-        .read_dir()
-        .map_err(|e| Errored(format!("failure when reading directory '{dir}': {e}")))?;
-    if dir_entries.count() == 0 {
+    } else if path.read_dir()?.next().is_none() {
         errored!(Errored, "path '{dir}' is an empty directory");
     }
+
     Ok(())
 }
