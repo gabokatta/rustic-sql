@@ -80,7 +80,7 @@ impl SelectBuilder {
         }
         while let Some(t) = self.tokens.front() {
             if t.kind != Identifier {
-                unexpected_token("ORDER_BY fields".to_string(), t)?
+                unexpected_token("ORDER_BY".to_string(), t)?
             } else if let Some(i) = self.tokens.pop_front() {
                 let mut new_order = Ordering::default();
                 new_order.field = i;

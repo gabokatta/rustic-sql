@@ -6,9 +6,9 @@ pub mod tokenizer;
 use crate::errors::Errored;
 use crate::query::OrderKind::Asc;
 use crate::query::StatementKind::Condition;
-use crate::query::TokenKind::{Identifier, Unknown};
+use crate::query::TokenKind::Unknown;
+use std::fmt::{Debug, Display, Formatter};
 
-#[derive(Debug)]
 pub struct Query {
     pub operation: Operation,
     pub table: String,
@@ -39,7 +39,6 @@ pub struct Statement {
     right: Token,
 }
 
-#[derive(Debug)]
 struct Ordering {
     field: Token,
     kind: OrderKind,
@@ -116,6 +115,29 @@ impl Query {
             expressions: vec![],
             ordering: vec![],
         }
+    }
+}
+
+impl Display for Query {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        writeln!(f, "Query Kind: [{:?}]", self.operation)?;
+        writeln!(f, "Table: {:?}", self.table)?;
+        let fields: Vec<&str> = self.fields.iter().map(|f| f.value.as_str()).collect();
+        writeln!(f, "Fields: {:?}", fields)?;
+        writeln!(f, "Expressions: {:?}", self.expressions)?;
+        writeln!(f, "Ordering: {:?}", self.ordering)
+    }
+}
+
+impl Debug for Query {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", &self)
+    }
+}
+
+impl Debug for Ordering {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "({}:{:?})", &self.field.value, &self.kind)
     }
 }
 
