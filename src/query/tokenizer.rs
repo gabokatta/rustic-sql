@@ -5,6 +5,26 @@ use crate::query::tokenizer::TokenizerState::*;
 use crate::query::TokenKind::{Identifier, Keyword, Number, Unknown};
 use crate::query::{Token, TokenKind};
 
+const VALID_OPERATORS: &[&str] = &["*", "=", "<", ">", ">=", "<=", "!=", "<>"];
+
+const IGNORABLE_CHARS: &[char] = &[' ', '(', ')', ',', ';', '\0', '\n'];
+
+const RESERVED_KEYWORDS: &[&str] = &[
+    "SELECT",
+    "UPDATE",
+    "DELETE",
+    "INSERT INTO",
+    "VALUES",
+    "ORDER BY",
+    "DESC",
+    "ASC",
+    "FROM",
+    "WHERE",
+    "AND",
+    "OR",
+    "NOT",
+];
+
 pub struct Tokenizer {
     i: usize,
     state: TokenizerState,
@@ -120,17 +140,17 @@ impl Tokenizer {
     }
 
     fn matches_keyword(&self, sql: &str) -> Option<String> {
-        self.matches_special_tokens(sql, &reserved_keywords(), is_identifier_char)
+        self.matches_special_tokens(sql, RESERVED_KEYWORDS, is_identifier_char)
     }
 
     fn matches_operator(&self, sql: &str) -> Option<String> {
-        self.matches_special_tokens(sql, &valid_operators(), is_operator_char)
+        self.matches_special_tokens(sql, VALID_OPERATORS, is_operator_char)
     }
 
     fn matches_special_tokens<F>(
         &self,
         sql: &str,
-        tokens: &[String],
+        tokens: &[&str],
         matches_kind: F,
     ) -> Option<String>
     where
@@ -182,48 +202,13 @@ fn char_at(index: usize, string: &str) -> char {
 }
 
 fn can_be_skipped(c: char) -> bool {
-    c.is_whitespace() || ignorable_chars().contains(&c)
+    c.is_whitespace() || IGNORABLE_CHARS.contains(&c)
 }
 
 fn is_identifier_char(c: char) -> bool {
-    c == '_' || c.is_alphanumeric() && !can_be_skipped(c)
+    c == '_' || (c.is_alphanumeric() && !can_be_skipped(c))
 }
 
 fn is_operator_char(c: char) -> bool {
-    valid_operators().contains(&c.to_string())
-}
-
-fn valid_operators() -> Vec<String> {
-    vec![
-        "*".to_string(),
-        "=".to_string(),
-        "<".to_string(),
-        ">".to_string(),
-        ">=".to_string(),
-        "<=".to_string(),
-        "!=".to_string(),
-        "<>".to_string(),
-    ]
-}
-
-fn ignorable_chars() -> Vec<char> {
-    vec![' ', '(', ')', ',', ';', '\0', '\n']
-}
-
-fn reserved_keywords() -> Vec<String> {
-    vec![
-        "SELECT".to_string(),
-        "UPDATE".to_string(),
-        "DELETE".to_string(),
-        "INSERT INTO".to_string(),
-        "VALUES".to_string(),
-        "ORDER BY".to_string(),
-        "DESC".to_string(),
-        "ASC".to_string(),
-        "FROM".to_string(),
-        "WHERE".to_string(),
-        "AND".to_string(),
-        "OR".to_string(),
-        "NOT".to_string(),
-    ]
+    VALID_OPERATORS.contains(&c.to_string().as_str())
 }

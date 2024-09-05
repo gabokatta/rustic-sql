@@ -1,4 +1,4 @@
-mod builder;
+pub mod builder;
 mod errors;
 mod executor;
 pub mod tokenizer;
@@ -8,6 +8,7 @@ use crate::query::Ordering::Asc;
 use crate::query::StatementKind::Condition;
 use crate::query::TokenKind::Unknown;
 
+#[derive(Debug)]
 pub struct Query {
     pub operation: Operation,
     pub table: String,
@@ -22,6 +23,7 @@ pub struct Token {
     pub kind: TokenKind,
 }
 
+#[derive(Debug)]
 struct Statement {
     kind: StatementKind,
     operator: Token,
