@@ -2,12 +2,14 @@ use crate::errored;
 use crate::query::errors::InvalidSQL;
 use crate::query::errors::InvalidSQL::Syntax;
 use crate::query::tokenizer::TokenizerState::*;
-use crate::query::TokenKind::{Identifier, Keyword, Number, Unknown};
+use crate::query::TokenKind::{
+    Identifier, Keyword, Number, ParenthesisClose, ParenthesisOpen, Unknown,
+};
 use crate::query::{Token, TokenKind};
 
 const VALID_OPERATORS: &[&str] = &["*", "=", "<", ">", ">=", "<=", "!=", "<>"];
 
-const IGNORABLE_CHARS: &[char] = &[' ', '(', ')', ',', ';', '\0', '\n'];
+const IGNORABLE_CHARS: &[char] = &[' ', ',', ';', '\0', '\n'];
 
 const RESERVED_KEYWORDS: &[&str] = &[
     "SELECT",
@@ -29,6 +31,7 @@ const RESERVED_KEYWORDS: &[&str] = &[
 pub struct Tokenizer {
     i: usize,
     state: TokenizerState,
+    parenthesis_count: u8,
 }
 
 enum TokenizerState {
@@ -37,12 +40,18 @@ enum TokenizerState {
     Operator,
     NumberLiteral,
     StringLiteral,
+    OpenParenthesis,
+    CloseParenthesis,
     Complete,
 }
 
 impl Tokenizer {
     pub fn new() -> Self {
-        Self { i: 0, state: Begin }
+        Self {
+            i: 0,
+            state: Begin,
+            parenthesis_count: 0,
+        }
     }
 
     pub fn tokenize(&mut self, sql: &str) -> Result<Vec<Token>, InvalidSQL> {
@@ -55,6 +64,7 @@ impl Tokenizer {
                 IdentifierOrKeyword => token = self.tokenize_identifier_or_keyword(sql)?,
                 Operator => token = self.tokenize_operator(sql)?,
                 NumberLiteral => token = self.tokenize_number(sql)?,
+                OpenParenthesis | CloseParenthesis => token = self.tokenize_parenthesis(sql)?,
                 StringLiteral => {
                     self.i += c.len_utf8();
                     token = self.tokenize_quoted(sql)?;
@@ -69,6 +79,9 @@ impl Tokenizer {
         if token.kind != Unknown {
             out.push(token);
         }
+        if self.parenthesis_count != 0 {
+            errored!(Syntax, "unclosed parentheses found.")
+        }
         Ok(out)
     }
 
@@ -78,6 +91,8 @@ impl Tokenizer {
             c if c.is_ascii_digit() => self.state = NumberLiteral,
             c if is_identifier_char(c) => self.state = IdentifierOrKeyword,
             '\'' => self.state = StringLiteral,
+            '(' => self.state = OpenParenthesis,
+            ')' => self.state = CloseParenthesis,
             c if is_operator_char(c) => self.state = Operator,
             _ => errored!(
                 Syntax,
@@ -87,6 +102,25 @@ impl Tokenizer {
             ),
         }
         Ok(())
+    }
+
+    fn tokenize_parenthesis(&mut self, sql: &str) -> Result<Token, InvalidSQL> {
+        let c = char_at(self.i, sql);
+        let mut token = Token::default();
+        if c == '(' {
+            self.parenthesis_count += 1;
+            token.kind = ParenthesisOpen
+        } else if c == ')' {
+            self.parenthesis_count -= 1;
+            token.kind = ParenthesisClose
+        } else {
+            errored!(Syntax, "unrecognized token {} at char {}", c, self.i)
+        }
+
+        self.i += c.len_utf8();
+        self.state = Complete;
+        token.value = c.to_string();
+        Ok(token)
     }
 
     fn tokenize_identifier_or_keyword(&mut self, sql: &str) -> Result<Token, InvalidSQL> {

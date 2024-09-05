@@ -44,6 +44,8 @@ pub enum TokenKind {
     Number,
     Operator,
     Identifier,
+    ParenthesisOpen,
+    ParenthesisClose,
     Keyword,
 }
 

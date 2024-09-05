@@ -17,19 +17,19 @@ impl SelectBuilder {
         Self { tokens }
     }
 
-    fn process_table(&self) -> String {
+    fn parse_table(&self) -> String {
         "".to_string()
     }
 
-    fn process_fields(&self) -> Vec<Token> {
+    fn parse_fields(&self) -> Vec<Token> {
         vec![]
     }
 
-    fn process_ordering(&self) -> Ordering {
+    fn parse_ordering(&self) -> Ordering {
         Ordering::default()
     }
 
-    fn process_expressions(&self) -> Vec<Statement> {
+    fn parse_statements(&self) -> Vec<Statement> {
         vec![]
     }
 }
@@ -40,10 +40,10 @@ impl Builder for SelectBuilder {
         self.validate_keywords()?;
 
         query.operation = Select;
-        query.table = self.process_table();
-        query.fields = self.process_fields();
-        query.expressions = self.process_expressions();
-        query.ordering = self.process_ordering();
+        query.table = self.parse_table();
+        query.fields = self.parse_fields();
+        query.expressions = self.parse_statements();
+        query.ordering = self.parse_ordering();
 
         Ok(query)
     }
