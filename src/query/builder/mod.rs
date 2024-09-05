@@ -2,6 +2,7 @@ mod delete;
 mod insert;
 mod select;
 mod update;
+mod r#where;
 
 use crate::errored;
 use crate::query::builder::delete::DeleteBuilder;
@@ -12,7 +13,7 @@ use crate::query::errors::InvalidSQL;
 use crate::query::errors::InvalidSQL::Syntax;
 use crate::query::Operation::{Delete, Insert, Select, Unknown, Update};
 use crate::query::TokenKind::Keyword;
-use crate::query::{Operation, Query, Token};
+use crate::query::{Operation, Query, Token, TokenKind};
 use std::collections::VecDeque;
 
 pub trait Builder {
@@ -64,4 +65,14 @@ fn validate_keywords(
         }
     }
     Ok(())
+}
+
+fn unexpected_token(stage: String, token: &Token) -> Result<(), InvalidSQL> {
+    errored!(
+        Syntax,
+        "unexpected token while parsing {} fields: {} of kind {:?}",
+        stage,
+        token.value,
+        token.kind
+    )
 }

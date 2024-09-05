@@ -6,7 +6,7 @@ pub mod tokenizer;
 use crate::errors::Errored;
 use crate::query::OrderKind::Asc;
 use crate::query::StatementKind::Condition;
-use crate::query::TokenKind::Unknown;
+use crate::query::TokenKind::{Identifier, Unknown};
 
 #[derive(Debug)]
 pub struct Query {
@@ -14,7 +14,7 @@ pub struct Query {
     pub table: String,
     fields: Vec<Token>,
     expressions: Vec<Statement>,
-    ordering: Ordering,
+    ordering: Vec<Ordering>,
 }
 
 #[derive(Debug)]
@@ -41,7 +41,7 @@ pub struct Statement {
 
 #[derive(Debug)]
 struct Ordering {
-    fields: Vec<Token>,
+    field: Token,
     kind: OrderKind,
 }
 
@@ -81,7 +81,7 @@ enum OrderKind {
 impl Ordering {
     pub fn default() -> Self {
         Self {
-            fields: vec![],
+            field: Token::default(),
             kind: Asc,
         }
     }
@@ -114,7 +114,7 @@ impl Query {
             table: "".to_string(),
             fields: vec![],
             expressions: vec![],
-            ordering: Ordering::default(),
+            ordering: vec![],
         }
     }
 }
