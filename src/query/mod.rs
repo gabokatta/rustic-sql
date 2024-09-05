@@ -23,8 +23,16 @@ pub struct Token {
     pub kind: TokenKind,
 }
 
+pub enum Expression {
+    Condition(Statement),
+    Assignment(Statement),
+    Group(Vec<Statement>),
+    And(Box<Expression>, Box<Expression>),
+    Or(Box<Expression>, Box<Expression>),
+}
+
 #[derive(Debug)]
-struct Statement {
+pub struct Statement {
     kind: StatementKind,
     operator: Token,
     left: Token,
@@ -59,7 +67,7 @@ pub enum Operation {
 }
 
 #[derive(Debug, PartialEq)]
-enum StatementKind {
+pub enum StatementKind {
     Condition,
     Assignment,
 }
