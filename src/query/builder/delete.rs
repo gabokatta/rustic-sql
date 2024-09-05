@@ -1,5 +1,6 @@
-use crate::query::builder::Builder;
+use crate::query::builder::{validate_keywords, Builder};
 use crate::query::errors::InvalidSQL;
+use crate::query::Operation::Delete;
 use crate::query::{Query, Token};
 use std::collections::VecDeque;
 
@@ -17,6 +18,13 @@ impl DeleteBuilder {
 
 impl Builder for DeleteBuilder {
     fn build(&mut self) -> Result<Query, InvalidSQL> {
-        todo!()
+        let mut query = Query::default();
+        query.operation = Delete;
+        self.validate_keywords()?;
+
+        Ok(query)
+    }
+    fn validate_keywords(&self) -> Result<(), InvalidSQL> {
+        validate_keywords(ALLOWED_KEYWORDS, &self.tokens, Delete)
     }
 }

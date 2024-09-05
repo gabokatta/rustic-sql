@@ -1,4 +1,4 @@
-use crate::query::builder::Builder;
+use crate::query::builder::{validate_keywords, Builder};
 use crate::query::errors::InvalidSQL;
 use crate::query::Operation::Select;
 use crate::query::{Query, Token};
@@ -22,7 +22,12 @@ impl Builder for SelectBuilder {
     fn build(&mut self) -> Result<Query, InvalidSQL> {
         let mut query = Query::default();
         query.operation = Select;
+        self.validate_keywords()?;
 
         Ok(query)
+    }
+
+    fn validate_keywords(&self) -> Result<(), InvalidSQL> {
+        validate_keywords(ALLOWED_KEYWORDS, &self.tokens, Select)
     }
 }

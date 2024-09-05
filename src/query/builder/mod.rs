@@ -11,11 +11,13 @@ use crate::query::builder::update::UpdateBuilder;
 use crate::query::errors::InvalidSQL;
 use crate::query::errors::InvalidSQL::Syntax;
 use crate::query::Operation::{Delete, Insert, Select, Unknown, Update};
+use crate::query::TokenKind::Keyword;
 use crate::query::{Operation, Query, Token};
 use std::collections::VecDeque;
 
 pub trait Builder {
     fn build(&mut self) -> Result<Query, InvalidSQL>;
+    fn validate_keywords(&self) -> Result<(), InvalidSQL>;
 }
 
 impl Query {
@@ -43,4 +45,23 @@ fn get_kind(token: Option<Token>) -> Operation {
         },
         None => Unknown,
     }
+}
+
+fn validate_keywords(
+    allowed: &[&str],
+    tokens: &VecDeque<Token>,
+    operation: Operation,
+) -> Result<(), InvalidSQL> {
+    let keywords: VecDeque<&Token> = tokens.iter().filter(|t| t.kind == Keyword).collect();
+    for word in keywords {
+        if !allowed.contains(&&*word.value) {
+            errored!(
+                Syntax,
+                "invalid keyword for {:?} query detected: {}",
+                operation,
+                word.value
+            )
+        }
+    }
+    Ok(())
 }
