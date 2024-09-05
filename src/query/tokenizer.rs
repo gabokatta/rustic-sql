@@ -14,6 +14,7 @@ const RESERVED_KEYWORDS: &[&str] = &[
     "UPDATE",
     "DELETE",
     "INSERT INTO",
+    "SET",
     "VALUES",
     "ORDER BY",
     "DESC",
