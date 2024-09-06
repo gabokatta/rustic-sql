@@ -6,18 +6,102 @@ mod update;
 
 use crate::errored;
 use crate::query::builder::delete::DeleteBuilder;
+use crate::query::builder::expression::{ExpressionBuilder, ExpressionNode};
 use crate::query::builder::insert::InsertBuilder;
 use crate::query::builder::select::SelectBuilder;
 use crate::query::builder::update::UpdateBuilder;
 use crate::query::errors::InvalidSQL;
 use crate::query::errors::InvalidSQL::Syntax;
 use crate::query::Operation::{Delete, Insert, Select, Unknown, Update};
-use crate::query::TokenKind::Keyword;
+use crate::query::TokenKind::{Identifier, Keyword, Operator, ParenthesisClose, ParenthesisOpen};
 use crate::query::{Operation, Query, Token};
 use std::collections::VecDeque;
 
 pub trait Builder {
     fn build(&mut self) -> Result<Query, InvalidSQL>;
+    fn tokens(&mut self) -> &mut VecDeque<Token>;
+
+    fn parse_table(&mut self, operation: Operation) -> Result<String, InvalidSQL> {
+        if let Some(t) = self.tokens().front() {
+            match operation {
+                Select | Delete => {
+                    if t.kind != Keyword || t.value != "FROM" {
+                        errored!(Syntax, "missing FROM clause, got: {}", t.value)
+                    }
+                    self.tokens().pop_front();
+                }
+                Update | Insert => {
+                    if t.kind != Identifier {
+                        errored!(Syntax, "expected table name, got: {:?}", t)
+                    }
+                }
+                _ => {
+                    errored!(Syntax, "unexpected query operation, got: {:?}", t)
+                }
+            }
+        }
+        match self.tokens().pop_front() {
+            None => errored!(Syntax, "could not find table identifier."),
+            Some(t) => {
+                if t.kind != Identifier {
+                    unexpected_token_in_stage("TABLE".to_string(), &t)?
+                }
+                Ok(t.value)
+            }
+        }
+    }
+
+    fn parse_columns(&mut self) -> Result<Vec<Token>, InvalidSQL> {
+        let mut fields: Vec<Token> = vec![];
+        while let Some(t) = self.tokens().front() {
+            match t.kind {
+                Identifier => {
+                    if let Some(op) = self.tokens().pop_front() {
+                        fields.push(op);
+                    }
+                }
+                Operator if t.value == "*" => {
+                    if let Some(op) = self.tokens().pop_front() {
+                        fields.push(op);
+                        break;
+                    }
+                }
+                Keyword if t.value == "FROM" || t.value == "VALUES" => {
+                    break;
+                }
+                ParenthesisOpen => {
+                    self.tokens().pop_front();
+                }
+                ParenthesisClose => {
+                    self.tokens().pop_front();
+                    break;
+                }
+                _ => unexpected_token_in_stage("COLUMN".to_string(), t)?,
+            }
+        }
+        Ok(fields)
+    }
+
+    fn parse_where(&mut self) -> Result<ExpressionNode, InvalidSQL> {
+        self.expect_keyword("WHERE")?;
+        ExpressionBuilder::parse_expressions(self.tokens())
+    }
+
+    fn expect_keyword(&mut self, keyword: &str) -> Result<(), InvalidSQL> {
+        if let Some(t) = self.tokens().front() {
+            if t.kind != Keyword || t.value != keyword.to_uppercase() {
+                errored!(
+                    Syntax,
+                    "missing {} clause, got: {}",
+                    keyword.to_uppercase(),
+                    t.value
+                )
+            }
+            self.tokens().pop_front();
+        }
+        Ok(())
+    }
+
     fn validate_keywords(&self) -> Result<(), InvalidSQL>;
 }
 

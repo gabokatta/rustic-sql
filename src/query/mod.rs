@@ -12,8 +12,10 @@ use std::fmt::{Debug, Display, Formatter};
 pub struct Query {
     pub operation: Operation,
     pub table: String,
-    fields: Vec<Token>,
-    expressions: ExpressionNode,
+    columns: Vec<Token>,
+    inserts: Vec<Token>,
+    updates: Vec<ExpressionNode>,
+    conditions: ExpressionNode,
     ordering: Vec<Ordering>,
 }
 
@@ -78,8 +80,10 @@ impl Query {
         Self {
             operation: Operation::Unknown,
             table: "".to_string(),
-            fields: vec![],
-            expressions: ExpressionNode::default(),
+            columns: vec![],
+            inserts: vec![],
+            updates: vec![],
+            conditions: ExpressionNode::default(),
             ordering: vec![],
         }
     }
@@ -87,11 +91,14 @@ impl Query {
 
 impl Display for Query {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        let fields: Vec<&str> = self.columns.iter().map(|f| f.value.as_str()).collect();
+        let inserts: Vec<&str> = self.inserts.iter().map(|f| f.value.as_str()).collect();
         writeln!(f, "Query Kind: [{:?}]", self.operation)?;
         writeln!(f, "Table: {:?}", self.table)?;
-        let fields: Vec<&str> = self.fields.iter().map(|f| f.value.as_str()).collect();
-        writeln!(f, "Fields: {:?}", fields)?;
-        writeln!(f, "Expressions: {:?}", self.expressions)?;
+        writeln!(f, "Columns: {:?}", fields)?;
+        writeln!(f, "Inserts: {:?}", inserts)?;
+        writeln!(f, "Updates: {:?}", self.updates)?;
+        writeln!(f, "Conditions: {:?}", self.conditions)?;
         writeln!(f, "Ordering: {:?}", self.ordering)
     }
 }
