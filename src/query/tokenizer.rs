@@ -7,7 +7,7 @@ use crate::query::TokenKind::{
 };
 use crate::query::{Token, TokenKind};
 
-const VALID_OPERATORS: &[&str] = &["*", "=", "<", ">", ">=", "<=", "!=", "<>"];
+const VALID_OPERATORS: &[&str] = &["*", "=", "<", ">", "!", ">=", "<=", "!="];
 
 const IGNORABLE_CHARS: &[char] = &[' ', ',', ';', '\0', '\n'];
 

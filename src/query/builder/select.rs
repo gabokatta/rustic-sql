@@ -1,12 +1,12 @@
 use crate::errored;
-use crate::query::builder::r#where::WhereBuilder;
-use crate::query::builder::{unexpected_token, validate_keywords, Builder};
+use crate::query::builder::expression::{ExpressionBuilder, ExpressionNode};
+use crate::query::builder::{unexpected_token_in_stage, validate_keywords, Builder};
 use crate::query::errors::InvalidSQL;
 use crate::query::errors::InvalidSQL::Syntax;
 use crate::query::Operation::Select;
 use crate::query::OrderKind::{Asc, Desc};
-use crate::query::TokenKind::{Identifier, Keyword, Operator, Unknown};
-use crate::query::{OrderKind, Ordering, Query, Token};
+use crate::query::TokenKind::{Identifier, Keyword, Operator};
+use crate::query::{Ordering, Query, Token};
 use std::collections::VecDeque;
 
 const ALLOWED_KEYWORDS: &[&str] = &[
@@ -15,14 +15,14 @@ const ALLOWED_KEYWORDS: &[&str] = &[
 
 pub struct SelectBuilder {
     tokens: VecDeque<Token>,
-    where_builder: WhereBuilder,
+    where_builder: ExpressionBuilder,
 }
 
 impl SelectBuilder {
     pub fn new(tokens: VecDeque<Token>) -> Self {
         Self {
             tokens,
-            where_builder: WhereBuilder::new(),
+            where_builder: ExpressionBuilder::new(),
         }
     }
 
@@ -37,7 +37,7 @@ impl SelectBuilder {
             None => errored!(Syntax, "could not find table identifier."),
             Some(t) => {
                 if t.kind != Identifier {
-                    unexpected_token("TABLE".to_string(), &t)?
+                    unexpected_token_in_stage("TABLE".to_string(), &t)?
                 }
                 Ok(t.value)
             }
@@ -62,7 +62,7 @@ impl SelectBuilder {
                 Keyword if t.value == "FROM" => {
                     break;
                 }
-                _ => unexpected_token("SELECT".to_string(), t)?,
+                _ => unexpected_token_in_stage("SELECT".to_string(), t)?,
             }
         }
         Ok(fields)
@@ -70,35 +70,43 @@ impl SelectBuilder {
 
     fn parse_ordering(&mut self) -> Result<Vec<Ordering>, InvalidSQL> {
         let mut ordering = vec![];
-        if let Some(t) = self.tokens.front() {
-            if t.kind != Keyword || t.value != "ORDER BY" {
-                errored!(Syntax, "missing ORDER BY clause, got: {}", t.value)
-            }
+        if self
+            .tokens
+            .front()
+            .map_or(false, |t| t.kind == Keyword && t.value == "ORDER BY")
+        {
             self.tokens.pop_front();
         } else {
             return Ok(ordering);
         }
-        while let Some(t) = self.tokens.front() {
+        while let Some(t) = self.tokens.pop_front() {
             if t.kind != Identifier {
-                unexpected_token("ORDER_BY".to_string(), t)?
-            } else if let Some(i) = self.tokens.pop_front() {
-                let mut new_order = Ordering::default();
-                new_order.field = i;
-                ordering.push(new_order)
+                unexpected_token_in_stage("ORDER_BY".to_string(), &t)?
             }
+            let mut new_order = Ordering::default();
+            new_order.field = t;
             if let Some(next) = self.tokens.front() {
-                let mut ordering_kind: Option<OrderKind> = None;
                 match next.kind {
-                    Keyword if next.value == "DESC" => ordering_kind = Some(Desc),
+                    Keyword if next.value == "ASC" || next.value == "DESC" => {
+                        new_order.kind = if next.value == "DESC" { Desc } else { Asc };
+                        self.tokens.pop_front();
+                    }
                     _ => {}
                 }
-                self.tokens.pop_front();
-                if let Some(o) = ordering.last_mut() {
-                    o.kind = ordering_kind.unwrap_or(Asc);
-                }
             }
+            ordering.push(new_order)
         }
         Ok(ordering)
+    }
+
+    fn parse_conditions(&mut self) -> Result<ExpressionNode, InvalidSQL> {
+        if let Some(t) = self.tokens.front() {
+            if t.kind != Keyword || t.value != "WHERE" {
+                errored!(Syntax, "missing WHERE clause, got: {}", t.value)
+            }
+            self.tokens.pop_front();
+        }
+        self.where_builder.parse_expressions(&mut self.tokens)
     }
 }
 
@@ -110,7 +118,7 @@ impl Builder for SelectBuilder {
         query.operation = Select;
         query.fields = self.parse_fields()?;
         query.table = self.parse_table()?;
-        query.expressions = self.where_builder.parse_conditions()?;
+        query.expressions = self.parse_conditions()?;
         query.ordering = self.parse_ordering()?;
 
         Ok(query)
@@ -118,13 +126,5 @@ impl Builder for SelectBuilder {
 
     fn validate_keywords(&self) -> Result<(), InvalidSQL> {
         validate_keywords(ALLOWED_KEYWORDS, &self.tokens, Select)
-    }
-}
-
-fn match_ordering(token: &Token) -> Result<OrderKind, InvalidSQL> {
-    match token.value.as_str() {
-        "ASC" => Ok(Asc),
-        "DESC" => Ok(Desc),
-        _ => errored!(Syntax, "expected ordering operator, got: {}", token.value),
     }
 }

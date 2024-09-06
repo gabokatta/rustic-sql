@@ -4,8 +4,8 @@ mod executor;
 pub mod tokenizer;
 
 use crate::errors::Errored;
+use crate::query::builder::expression::ExpressionNode;
 use crate::query::OrderKind::Asc;
-use crate::query::StatementKind::Condition;
 use crate::query::TokenKind::Unknown;
 use std::fmt::{Debug, Display, Formatter};
 
@@ -13,7 +13,7 @@ pub struct Query {
     pub operation: Operation,
     pub table: String,
     fields: Vec<Token>,
-    expressions: Vec<Statement>,
+    expressions: ExpressionNode,
     ordering: Vec<Ordering>,
 }
 
@@ -21,22 +21,6 @@ pub struct Query {
 pub struct Token {
     pub value: String,
     pub kind: TokenKind,
-}
-
-pub enum Expression {
-    Condition(Statement),
-    Assignment(Statement),
-    Group(Vec<Statement>),
-    And(Box<Expression>, Box<Expression>),
-    Or(Box<Expression>, Box<Expression>),
-}
-
-#[derive(Debug)]
-pub struct Statement {
-    kind: StatementKind,
-    operator: Token,
-    left: Token,
-    right: Token,
 }
 
 struct Ordering {
@@ -65,12 +49,6 @@ pub enum Operation {
     Insert,
 }
 
-#[derive(Debug, PartialEq)]
-pub enum StatementKind {
-    Condition,
-    Assignment,
-}
-
 #[derive(Debug)]
 enum OrderKind {
     Asc,
@@ -82,17 +60,6 @@ impl Ordering {
         Self {
             field: Token::default(),
             kind: Asc,
-        }
-    }
-}
-
-impl Statement {
-    pub fn default() -> Self {
-        Self {
-            kind: Condition,
-            operator: Token::default(),
-            left: Token::default(),
-            right: Token::default(),
         }
     }
 }
@@ -112,7 +79,7 @@ impl Query {
             operation: Operation::Unknown,
             table: "".to_string(),
             fields: vec![],
-            expressions: vec![],
+            expressions: ExpressionNode::default(),
             ordering: vec![],
         }
     }
@@ -138,6 +105,22 @@ impl Debug for Query {
 impl Debug for Ordering {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "({}:{:?})", &self.field.value, &self.kind)
+    }
+}
+
+impl Debug for ExpressionNode {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match self {
+            ExpressionNode::Empty => write!(f, "()"),
+            ExpressionNode::Leaf(t) => write!(f, "{}", t.value),
+            ExpressionNode::Statement {
+                operator,
+                left,
+                right,
+            } => {
+                write!(f, "[{:?}] ({:?},{:?})", operator, left, right)
+            }
+        }
     }
 }
 
