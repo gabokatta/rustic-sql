@@ -1,7 +1,11 @@
 use crate::errored;
+use crate::query::builder::expression::ExpressionNode::Leaf;
+use crate::query::builder::expression::ExpressionOperator::{
+    Equals, GreaterOrEqual, GreaterThan, LessOrEqual, LessThan, NotEquals,
+};
 use crate::query::errors::InvalidSQL;
 use crate::query::errors::InvalidSQL::Syntax;
-use crate::query::TokenKind::ParenthesisClose;
+use crate::query::TokenKind::{Keyword, ParenthesisClose};
 use crate::query::{Token, TokenKind};
 use std::collections::VecDeque;
 
@@ -43,65 +47,129 @@ impl ExpressionBuilder {
         &self,
         tokens: &mut VecDeque<Token>,
     ) -> Result<ExpressionNode, InvalidSQL> {
-        self.parse_statement(tokens)
+        self.parse_or(tokens)
     }
 
     fn parse_leaf(&self, tokens: &mut VecDeque<Token>) -> Result<ExpressionNode, InvalidSQL> {
-        if let Some(t) = tokens.pop_front() {
+        if let Some(t) = tokens.front() {
             match t.kind {
-                TokenKind::String | TokenKind::Number | TokenKind::Identifier => {
-                    Ok(ExpressionNode::Leaf(t))
-                }
                 TokenKind::ParenthesisOpen => {
-                    let node = self.parse_expressions(tokens)?;
-                    if let Some(next) = tokens.front() {
-                        if next.kind != ParenthesisClose {
-                            errored!(Syntax, "expected closing parenthesis, got: {:?}", t)
+                    tokens.pop_front();
+                    let expression = self.parse_expressions(tokens)?;
+                    if let Some(t) = tokens.front() {
+                        if t.kind == ParenthesisClose {
+                            tokens.pop_front();
+                            Ok(expression)
+                        } else {
+                            errored!(Syntax, "unclosed parenthesis while evaluating WHERE.")
                         }
+                    } else {
+                        errored!(Syntax, "")
                     }
-                    Ok(node)
                 }
-                _ => errored!(Syntax, "invalid token during WHERE parsing: {:?}", t),
+                TokenKind::Identifier | TokenKind::Number | TokenKind::String => {
+                    if let Some(t) = tokens.pop_front() {
+                        Ok(Leaf(t))
+                    } else {
+                        errored!(Syntax, "")
+                    }
+                }
+                _ => {
+                    errored!(
+                        Syntax,
+                        "unrecognized token while parsing comparison: {:?}.",
+                        t
+                    )
+                }
             }
         } else {
-            errored!(Syntax, "missing tokens while parsing conditions.")
+            errored!(Syntax, "reached end of query while parsing comparisons.")
         }
     }
 
-    fn parse_statement(&self, tokens: &mut VecDeque<Token>) -> Result<ExpressionNode, InvalidSQL> {
-        let mut left = self.parse_leaf(tokens)?;
-        while let Some(t) = tokens.front() {
-            let operator: ExpressionOperator = match t.kind {
-                TokenKind::Operator => match t.value.as_str() {
-                    ">" => ExpressionOperator::GreaterThan,
-                    "=" => ExpressionOperator::Equals,
-                    "<" => ExpressionOperator::LessThan,
-                    ">=" => ExpressionOperator::GreaterOrEqual,
-                    "<=" => ExpressionOperator::LessOrEqual,
-                    "!=" => ExpressionOperator::NotEquals,
-                    _ => ExpressionOperator::None,
-                },
-                TokenKind::Keyword => match t.value.as_str() {
-                    "AND" => ExpressionOperator::And,
-                    "OR" => ExpressionOperator::Or,
-                    "NOT" => ExpressionOperator::Not,
-                    _ => ExpressionOperator::None,
-                },
-                _ => ExpressionOperator::None,
+    fn parse_simple_operator(
+        &self,
+        tokens: &mut VecDeque<Token>,
+    ) -> Result<ExpressionOperator, InvalidSQL> {
+        if let Some(t) = tokens.front() {
+            let op = match t.value.as_str() {
+                "=" => Equals,
+                "!=" => NotEquals,
+                ">" => GreaterThan,
+                ">=" => GreaterOrEqual,
+                "<" => LessThan,
+                "<=" => LessOrEqual,
+                _ => errored!(Syntax, "invalid operator, got: {}", t.value),
             };
-            if operator == ExpressionOperator::None {
+            tokens.pop_front();
+            Ok(op)
+        } else {
+            errored!(Syntax, "expected operator but was end of query.")
+        }
+    }
+
+    fn parse_comparisons(
+        &self,
+        tokens: &mut VecDeque<Token>,
+    ) -> Result<ExpressionNode, InvalidSQL> {
+        let left = self.parse_leaf(tokens)?;
+        let operator = self.parse_simple_operator(tokens)?;
+        let right = self.parse_leaf(tokens)?;
+        Ok(ExpressionNode::Statement {
+            operator,
+            left: Box::new(left),
+            right: Box::new(right),
+        })
+    }
+
+    fn parse_and(&self, tokens: &mut VecDeque<Token>) -> Result<ExpressionNode, InvalidSQL> {
+        let mut left = self.parse_not(tokens)?;
+        while let Some(t) = tokens.front() {
+            if t.kind == Keyword && t.value == "AND" {
+                tokens.pop_front(); // Consume 'AND'
+                let right = self.parse_not(tokens)?;
+                left = ExpressionNode::Statement {
+                    operator: ExpressionOperator::And,
+                    left: Box::new(left),
+                    right: Box::new(right),
+                };
+            } else {
                 break;
             }
-            tokens.pop_front();
+        }
+        Ok(left)
+    }
 
-            let right = self.parse_leaf(tokens)?;
-            left = ExpressionNode::Statement {
-                operator,
-                left: Box::new(left),
-                right: Box::new(right),
+    fn parse_or(&self, tokens: &mut VecDeque<Token>) -> Result<ExpressionNode, InvalidSQL> {
+        let mut left = self.parse_and(tokens)?;
+        while let Some(t) = tokens.front() {
+            if t.kind == Keyword && t.value == "OR" {
+                tokens.pop_front(); // Consume 'OR'
+                let right = self.parse_and(tokens)?;
+                left = ExpressionNode::Statement {
+                    operator: ExpressionOperator::Or,
+                    left: Box::new(left),
+                    right: Box::new(right),
+                };
+            } else {
+                break;
             }
         }
-
         Ok(left)
+    }
+
+    fn parse_not(&self, tokens: &mut VecDeque<Token>) -> Result<ExpressionNode, InvalidSQL> {
+        if let Some(t) = tokens.front() {
+            if t.kind == Keyword && t.value == "NOT" {
+                tokens.pop_front(); // Consume 'NOT'
+                let node = self.parse_leaf(tokens)?;
+                return Ok(ExpressionNode::Statement {
+                    operator: ExpressionOperator::Not,
+                    left: Box::new(node),
+                    right: Box::new(ExpressionNode::Empty),
+                });
+            }
+        }
+        self.parse_comparisons(tokens)
     }
 }
