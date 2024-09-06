@@ -10,7 +10,7 @@ use crate::query::{Ordering, Query, Token};
 use std::collections::VecDeque;
 
 const ALLOWED_KEYWORDS: &[&str] = &[
-    "SELECT", "FROM", "WHERE", "ORDER BY", "ASC", "DESC", "AND", "OR",
+    "SELECT", "FROM", "WHERE", "ORDER BY", "ASC", "DESC", "AND", "OR", "NOT",
 ];
 
 pub struct SelectBuilder {

@@ -50,110 +50,36 @@ impl ExpressionBuilder {
         self.parse_or(tokens)
     }
 
-    fn parse_leaf(&self, tokens: &mut VecDeque<Token>) -> Result<ExpressionNode, InvalidSQL> {
-        if let Some(t) = tokens.front() {
-            match t.kind {
-                TokenKind::ParenthesisOpen => {
-                    tokens.pop_front();
-                    let expression = self.parse_expressions(tokens)?;
-                    if let Some(t) = tokens.front() {
-                        if t.kind == ParenthesisClose {
-                            tokens.pop_front();
-                            Ok(expression)
-                        } else {
-                            errored!(Syntax, "unclosed parenthesis while evaluating WHERE.")
-                        }
-                    } else {
-                        errored!(Syntax, "")
-                    }
-                }
-                TokenKind::Identifier | TokenKind::Number | TokenKind::String => {
-                    if let Some(t) = tokens.pop_front() {
-                        Ok(Leaf(t))
-                    } else {
-                        errored!(Syntax, "")
-                    }
-                }
-                _ => {
-                    errored!(
-                        Syntax,
-                        "unrecognized token while parsing comparison: {:?}.",
-                        t
-                    )
-                }
+    fn parse_or(&self, tokens: &mut VecDeque<Token>) -> Result<ExpressionNode, InvalidSQL> {
+        let mut left = self.parse_and(tokens)?;
+        while let Some(t) = tokens.front() {
+            if t.kind != Keyword || t.value != "OR" {
+                break;
             }
-        } else {
-            errored!(Syntax, "reached end of query while parsing comparisons.")
-        }
-    }
-
-    fn parse_simple_operator(
-        &self,
-        tokens: &mut VecDeque<Token>,
-    ) -> Result<ExpressionOperator, InvalidSQL> {
-        if let Some(t) = tokens.front() {
-            let op = match t.value.as_str() {
-                "=" => Equals,
-                "!=" => NotEquals,
-                ">" => GreaterThan,
-                ">=" => GreaterOrEqual,
-                "<" => LessThan,
-                "<=" => LessOrEqual,
-                _ => errored!(Syntax, "invalid operator, got: {}", t.value),
-            };
             tokens.pop_front();
-            Ok(op)
-        } else {
-            errored!(Syntax, "expected operator but was end of query.")
+            let right = self.parse_and(tokens)?;
+            left = ExpressionNode::Statement {
+                operator: ExpressionOperator::Or,
+                left: Box::new(left),
+                right: Box::new(right),
+            };
         }
-    }
-
-    fn parse_comparisons(
-        &self,
-        tokens: &mut VecDeque<Token>,
-    ) -> Result<ExpressionNode, InvalidSQL> {
-        let left = self.parse_leaf(tokens)?;
-        let operator = self.parse_simple_operator(tokens)?;
-        let right = self.parse_leaf(tokens)?;
-        Ok(ExpressionNode::Statement {
-            operator,
-            left: Box::new(left),
-            right: Box::new(right),
-        })
+        Ok(left)
     }
 
     fn parse_and(&self, tokens: &mut VecDeque<Token>) -> Result<ExpressionNode, InvalidSQL> {
         let mut left = self.parse_not(tokens)?;
         while let Some(t) = tokens.front() {
-            if t.kind == Keyword && t.value == "AND" {
-                tokens.pop_front(); // Consume 'AND'
-                let right = self.parse_not(tokens)?;
-                left = ExpressionNode::Statement {
-                    operator: ExpressionOperator::And,
-                    left: Box::new(left),
-                    right: Box::new(right),
-                };
-            } else {
+            if t.kind != Keyword || t.value != "AND" {
                 break;
             }
-        }
-        Ok(left)
-    }
-
-    fn parse_or(&self, tokens: &mut VecDeque<Token>) -> Result<ExpressionNode, InvalidSQL> {
-        let mut left = self.parse_and(tokens)?;
-        while let Some(t) = tokens.front() {
-            if t.kind == Keyword && t.value == "OR" {
-                tokens.pop_front(); // Consume 'OR'
-                let right = self.parse_and(tokens)?;
-                left = ExpressionNode::Statement {
-                    operator: ExpressionOperator::Or,
-                    left: Box::new(left),
-                    right: Box::new(right),
-                };
-            } else {
-                break;
-            }
+            tokens.pop_front();
+            let right = self.parse_not(tokens)?;
+            left = ExpressionNode::Statement {
+                operator: ExpressionOperator::And,
+                left: Box::new(left),
+                right: Box::new(right),
+            };
         }
         Ok(left)
     }
@@ -161,8 +87,8 @@ impl ExpressionBuilder {
     fn parse_not(&self, tokens: &mut VecDeque<Token>) -> Result<ExpressionNode, InvalidSQL> {
         if let Some(t) = tokens.front() {
             if t.kind == Keyword && t.value == "NOT" {
-                tokens.pop_front(); // Consume 'NOT'
-                let node = self.parse_leaf(tokens)?;
+                tokens.pop_front();
+                let node = self.parse_comparisons(tokens)?;
                 return Ok(ExpressionNode::Statement {
                     operator: ExpressionOperator::Not,
                     left: Box::new(node),
@@ -171,5 +97,75 @@ impl ExpressionBuilder {
             }
         }
         self.parse_comparisons(tokens)
+    }
+
+    fn parse_leaf(&self, tokens: &mut VecDeque<Token>) -> Result<ExpressionNode, InvalidSQL> {
+        let t = tokens
+            .front()
+            .ok_or_else(|| Syntax("reached end of query while parsing comparisons.".to_string()))?;
+
+        match t.kind {
+            TokenKind::ParenthesisOpen => {
+                tokens.pop_front();
+                let expression = self.parse_expressions(tokens)?;
+                let t = tokens.front().ok_or_else(|| {
+                    Syntax("unclosed parenthesis while evaluating WHERE.".to_string())
+                })?;
+
+                if t.kind != ParenthesisClose {
+                    errored!(Syntax, "unclosed parenthesis while evaluating WHERE.");
+                }
+
+                tokens.pop_front();
+                Ok(expression)
+            }
+            TokenKind::Identifier | TokenKind::Number | TokenKind::String => {
+                Ok(Leaf(tokens.pop_front().unwrap()))
+            }
+            _ => {
+                errored!(
+                    Syntax,
+                    "unrecognized token while parsing comparison: {:?}.",
+                    t
+                )
+            }
+        }
+    }
+
+    fn parse_simple_operator(
+        &self,
+        tokens: &mut VecDeque<Token>,
+    ) -> Result<ExpressionOperator, InvalidSQL> {
+        let t = tokens
+            .front()
+            .ok_or_else(|| Syntax("expected operator but was end of query.".to_string()))?;
+        let op = match t.value.as_str() {
+            "=" => Equals,
+            "!=" => NotEquals,
+            ">" => GreaterThan,
+            ">=" => GreaterOrEqual,
+            "<" => LessThan,
+            "<=" => LessOrEqual,
+            _ => errored!(Syntax, "invalid operator, got: {}", t.value),
+        };
+        tokens.pop_front();
+        Ok(op)
+    }
+
+    fn parse_comparisons(
+        &self,
+        tokens: &mut VecDeque<Token>,
+    ) -> Result<ExpressionNode, InvalidSQL> {
+        let left = self.parse_leaf(tokens)?;
+        let operator = self.parse_simple_operator(tokens);
+        if operator.is_err() {
+            return Ok(left);
+        }
+        let right = self.parse_leaf(tokens)?;
+        Ok(ExpressionNode::Statement {
+            operator: operator?,
+            left: Box::new(left),
+            right: Box::new(right),
+        })
     }
 }
