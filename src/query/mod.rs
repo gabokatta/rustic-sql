@@ -118,7 +118,7 @@ impl Debug for ExpressionNode {
                 left,
                 right,
             } => {
-                write!(f, "[{:?}] ({:?},{:?})", operator, left, right)
+                write!(f, "{:?}[{:?},{:?}]", operator, left, right)
             }
         }
     }

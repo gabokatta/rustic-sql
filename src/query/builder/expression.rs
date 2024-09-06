@@ -107,25 +107,24 @@ impl ExpressionBuilder {
             TokenKind::ParenthesisOpen => {
                 tokens.pop_front();
                 let expression = self.parse_expressions(tokens)?;
-                let t = tokens.front().ok_or_else(|| {
-                    Syntax("unclosed parenthesis while evaluating WHERE.".to_string())
-                })?;
-                if t.kind != ParenthesisClose {
-                    errored!(Syntax, "unclosed parenthesis while evaluating WHERE.");
-                }
+                tokens
+                    .front()
+                    .filter(|t| t.kind == ParenthesisClose)
+                    .ok_or_else(|| {
+                        Syntax("unclosed parenthesis while evaluating WHERE.".to_string())
+                    })?;
                 tokens.pop_front();
                 Ok(expression)
             }
-            TokenKind::Identifier | TokenKind::Number | TokenKind::String => {
-                Ok(Leaf(tokens.pop_front().unwrap()))
-            }
-            _ => {
-                errored!(
-                    Syntax,
-                    "unrecognized token while parsing comparison: {:?}.",
-                    t
-                )
-            }
+            TokenKind::Identifier | TokenKind::Number | TokenKind::String => tokens
+                .pop_front()
+                .map(Leaf)
+                .ok_or_else(|| Syntax("failed to parse leaf node".to_string())),
+            _ => errored!(
+                Syntax,
+                "unrecognized token while parsing comparison: {:?}.",
+                t
+            ),
         }
     }
 
