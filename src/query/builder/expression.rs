@@ -103,7 +103,6 @@ impl ExpressionBuilder {
         let t = tokens
             .front()
             .ok_or_else(|| Syntax("reached end of query while parsing comparisons.".to_string()))?;
-
         match t.kind {
             TokenKind::ParenthesisOpen => {
                 tokens.pop_front();
@@ -111,11 +110,9 @@ impl ExpressionBuilder {
                 let t = tokens.front().ok_or_else(|| {
                     Syntax("unclosed parenthesis while evaluating WHERE.".to_string())
                 })?;
-
                 if t.kind != ParenthesisClose {
                     errored!(Syntax, "unclosed parenthesis while evaluating WHERE.");
                 }
-
                 tokens.pop_front();
                 Ok(expression)
             }
