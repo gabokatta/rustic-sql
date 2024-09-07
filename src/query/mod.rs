@@ -19,6 +19,7 @@ pub struct Query {
     ordering: Vec<Ordering>,
 }
 
+#[derive(Debug, PartialEq)]
 pub struct Token {
     pub value: String,
     pub kind: TokenKind,
@@ -111,18 +112,6 @@ impl Debug for Query {
 impl Debug for Ordering {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "({}:{:?})", &self.field.value, &self.kind)
-    }
-}
-
-impl Display for Token {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "[{}:{:?}]", self.value, self.kind)
-    }
-}
-
-impl Debug for Token {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self)
     }
 }
 

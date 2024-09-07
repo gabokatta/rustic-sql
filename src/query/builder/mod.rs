@@ -83,10 +83,9 @@ pub trait Builder {
         ExpressionBuilder::parse_expressions(self.tokens())
     }
 
-    fn pop_expecting(&mut self, value: &str, kind: TokenKind) -> Result<(), InvalidSQL> {
+    fn pop_expecting(&mut self, value: &str, kind: TokenKind) -> Result<Option<Token>, InvalidSQL> {
         self.peek_expecting(value, kind)?;
-        self.tokens().pop_front();
-        Ok(())
+        Ok(self.tokens().pop_front())
     }
 
     fn peek_expecting(&mut self, value: &str, kind: TokenKind) -> Result<(), InvalidSQL> {
