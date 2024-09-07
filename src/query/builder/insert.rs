@@ -21,12 +21,8 @@ impl InsertBuilder {
     fn parse_insert_values(&mut self) -> Result<Vec<Token>, InvalidSQL> {
         self.pop_expecting("VALUES", Keyword)?;
         self.peek_expecting("(", ParenthesisOpen)?;
-        let mut closed_values = false;
         let mut values = vec![];
         while let Some(t) = self.tokens.front() {
-            if closed_values {
-                unexpected_token_in_stage("AFTER VALUES", t)?;
-            }
             match t.kind {
                 TokenKind::String | TokenKind::Number => {
                     if let Some(token) = self.tokens.pop_front() {
@@ -38,7 +34,6 @@ impl InsertBuilder {
                 }
                 ParenthesisClose => {
                     self.tokens.pop_front();
-                    closed_values = true;
                 }
                 _ => unexpected_token_in_stage("VALUES", t)?,
             }
@@ -56,6 +51,7 @@ impl Builder for InsertBuilder {
         self.peek_expecting("(", ParenthesisOpen)?;
         query.columns = self.parse_columns()?;
         query.inserts = self.parse_insert_values()?;
+        self.expect_none()?;
         Ok(query)
     }
 

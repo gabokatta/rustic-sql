@@ -49,17 +49,15 @@ impl Builder for SelectBuilder {
         query.operation = Select;
         query.columns = self.parse_columns()?;
         query.table = self.parse_table(Select)?;
-        query.conditions = self.parse_where()?;
+        if self.peek_expecting("WHERE", Keyword).is_ok() {
+            query.conditions = self.parse_where()?;
+        }
         match self.peek_expecting("ORDER BY", Keyword) {
             Ok(_) => {
                 self.tokens.pop_front();
                 query.ordering = self.parse_ordering()?;
             }
-            Err(_) => {
-                if let Some(t) = self.tokens.front() {
-                    unexpected_token_in_stage("AFTER CONDITIONS", t)?;
-                }
-            }
+            Err(_) => self.expect_none()?,
         }
         Ok(query)
     }

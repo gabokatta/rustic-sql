@@ -83,6 +83,13 @@ pub trait Builder {
         ExpressionBuilder::parse_expressions(self.tokens())
     }
 
+    fn expect_none(&mut self) -> Result<(), InvalidSQL> {
+        if let Some(t) = self.tokens().front() {
+            errored!(Syntax, "expected end of query but got: {:?}", t);
+        }
+        Ok(())
+    }
+
     fn pop_expecting(&mut self, value: &str, kind: TokenKind) -> Result<Option<Token>, InvalidSQL> {
         self.peek_expecting(value, kind)?;
         Ok(self.tokens().pop_front())

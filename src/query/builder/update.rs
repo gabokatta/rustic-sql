@@ -1,6 +1,6 @@
 use crate::errored;
 use crate::query::builder::expression::{ExpressionBuilder, ExpressionNode};
-use crate::query::builder::{validate_keywords, Builder};
+use crate::query::builder::{unexpected_token_in_stage, validate_keywords, Builder};
 use crate::query::errors::InvalidSQL;
 use crate::query::errors::InvalidSQL::Syntax;
 use crate::query::Operation::Update;
@@ -48,7 +48,12 @@ impl Builder for UpdateBuilder {
         query.operation = Update;
         query.table = self.parse_table(Update)?;
         query.updates = self.parse_updates()?;
-        query.conditions = self.parse_where()?;
+        match self.peek_expecting("WHERE", Keyword) {
+            Ok(_) => {
+                query.conditions = self.parse_where()?;
+            }
+            Err(_) => self.expect_none()?,
+        }
         Ok(query)
     }
 

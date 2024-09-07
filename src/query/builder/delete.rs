@@ -1,6 +1,7 @@
 use crate::query::builder::{validate_keywords, Builder};
 use crate::query::errors::InvalidSQL;
 use crate::query::Operation::Delete;
+use crate::query::TokenKind::Keyword;
 use crate::query::{Query, Token};
 use std::collections::VecDeque;
 
@@ -22,7 +23,12 @@ impl Builder for DeleteBuilder {
         self.validate_keywords()?;
         query.operation = Delete;
         query.table = self.parse_table(Delete)?;
-        query.conditions = self.parse_where()?;
+        match self.peek_expecting("WHERE", Keyword) {
+            Ok(_) => {
+                query.conditions = self.parse_where()?;
+            }
+            Err(_) => self.expect_none()?,
+        }
         Ok(query)
     }
 
