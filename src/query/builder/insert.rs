@@ -25,7 +25,7 @@ impl InsertBuilder {
         let mut values = vec![];
         while let Some(t) = self.tokens.front() {
             if closed_values {
-                errored!(Syntax, "invalid tokens after insert value: {:?}", t)
+                unexpected_token_in_stage("AFTER VALUES", t)?;
             }
             match t.kind {
                 TokenKind::String | TokenKind::Number => {

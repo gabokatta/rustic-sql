@@ -156,7 +156,7 @@ fn validate_keywords(
 pub fn unexpected_token_in_stage(stage: &str, token: &Token) -> Result<(), InvalidSQL> {
     errored!(
         Syntax,
-        "unexpected token while parsing {} fields: [{:?}]",
+        "unexpected token while parsing {} fields: {:?}",
         stage,
         token
     )
