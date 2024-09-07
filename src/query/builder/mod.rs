@@ -14,7 +14,7 @@ use crate::query::errors::InvalidSQL;
 use crate::query::errors::InvalidSQL::Syntax;
 use crate::query::Operation::{Delete, Insert, Select, Unknown, Update};
 use crate::query::TokenKind::{Identifier, Keyword, Operator, ParenthesisClose, ParenthesisOpen};
-use crate::query::{Operation, Query, Token};
+use crate::query::{Operation, Query, Token, TokenKind};
 use std::collections::VecDeque;
 
 pub trait Builder {
@@ -30,11 +30,7 @@ pub trait Builder {
                     }
                     self.tokens().pop_front();
                 }
-                Update | Insert => {
-                    if t.kind != Identifier {
-                        errored!(Syntax, "expected table name, got: {:?}", t)
-                    }
-                }
+                Update | Insert => {}
                 _ => {
                     errored!(Syntax, "unexpected query operation, got: {:?}", t)
                 }
@@ -44,7 +40,7 @@ pub trait Builder {
             None => errored!(Syntax, "could not find table identifier."),
             Some(t) => {
                 if t.kind != Identifier {
-                    unexpected_token_in_stage("TABLE".to_string(), &t)?
+                    unexpected_token_in_stage("TABLE", &t)?
                 }
                 Ok(t.value)
             }
@@ -76,28 +72,34 @@ pub trait Builder {
                     self.tokens().pop_front();
                     break;
                 }
-                _ => unexpected_token_in_stage("COLUMN".to_string(), t)?,
+                _ => unexpected_token_in_stage("COLUMN", t)?,
             }
         }
         Ok(fields)
     }
 
     fn parse_where(&mut self) -> Result<ExpressionNode, InvalidSQL> {
-        self.expect_keyword("WHERE")?;
+        self.pop_expecting("WHERE", Keyword)?;
         ExpressionBuilder::parse_expressions(self.tokens())
     }
 
-    fn expect_keyword(&mut self, keyword: &str) -> Result<(), InvalidSQL> {
+    fn pop_expecting(&mut self, value: &str, kind: TokenKind) -> Result<(), InvalidSQL> {
+        self.peek_expecting(value, kind)?;
+        self.tokens().pop_front();
+        Ok(())
+    }
+
+    fn peek_expecting(&mut self, value: &str, kind: TokenKind) -> Result<(), InvalidSQL> {
+        let expected = Token {
+            value: value.to_string(),
+            kind,
+        };
         if let Some(t) = self.tokens().front() {
-            if t.kind != Keyword || t.value != keyword.to_uppercase() {
-                errored!(
-                    Syntax,
-                    "missing {} clause, got: {}",
-                    keyword.to_uppercase(),
-                    t.value
-                )
+            if t.kind != expected.kind || t.value != expected.value.to_uppercase() {
+                errored!(Syntax, "expected {:?} token, got: {:?}", expected, t)
             }
-            self.tokens().pop_front();
+        } else {
+            errored!(Syntax, "got None when expecting: {:?}", expected)
         }
         Ok(())
     }
@@ -151,12 +153,11 @@ fn validate_keywords(
     Ok(())
 }
 
-fn unexpected_token_in_stage(stage: String, token: &Token) -> Result<(), InvalidSQL> {
+pub fn unexpected_token_in_stage(stage: &str, token: &Token) -> Result<(), InvalidSQL> {
     errored!(
         Syntax,
-        "unexpected token while parsing {} fields: {} of kind {:?}",
+        "unexpected token while parsing {} fields: [{:?}]",
         stage,
-        token.value,
-        token.kind
+        token
     )
 }

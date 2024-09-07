@@ -1,8 +1,9 @@
 use crate::errored;
-use crate::query::builder::{validate_keywords, Builder};
+use crate::query::builder::{unexpected_token_in_stage, validate_keywords, Builder};
 use crate::query::errors::InvalidSQL;
 use crate::query::errors::InvalidSQL::Syntax;
 use crate::query::Operation::Insert;
+use crate::query::TokenKind::{Keyword, ParenthesisClose, ParenthesisOpen};
 use crate::query::{Query, Token, TokenKind};
 use std::collections::VecDeque;
 
@@ -18,7 +19,8 @@ impl InsertBuilder {
     }
 
     fn parse_insert_values(&mut self) -> Result<Vec<Token>, InvalidSQL> {
-        self.expect_keyword("VALUES")?;
+        self.pop_expecting("VALUES", Keyword)?;
+        self.peek_expecting("(", ParenthesisOpen)?;
         let mut closed_values = false;
         let mut values = vec![];
         while let Some(t) = self.tokens.front() {
@@ -31,14 +33,14 @@ impl InsertBuilder {
                         values.push(token);
                     }
                 }
-                TokenKind::ParenthesisOpen => {
+                ParenthesisOpen => {
                     self.tokens.pop_front();
                 }
-                TokenKind::ParenthesisClose => {
+                ParenthesisClose => {
                     self.tokens.pop_front();
                     closed_values = true;
                 }
-                _ => {}
+                _ => unexpected_token_in_stage("VALUES", t)?,
             }
         }
         Ok(values)
@@ -51,9 +53,9 @@ impl Builder for InsertBuilder {
         self.validate_keywords()?;
         query.operation = Insert;
         query.table = self.parse_table(Insert)?;
+        self.peek_expecting("(", ParenthesisOpen)?;
         query.columns = self.parse_columns()?;
         query.inserts = self.parse_insert_values()?;
-
         Ok(query)
     }
 

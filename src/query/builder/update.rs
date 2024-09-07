@@ -20,7 +20,7 @@ impl UpdateBuilder {
     }
 
     fn parse_updates(&mut self) -> Result<Vec<ExpressionNode>, InvalidSQL> {
-        self.expect_keyword("SET")?;
+        self.pop_expecting("SET", Keyword)?;
         let mut updates = vec![];
         while let Some(t) = self.tokens.front() {
             if t.kind != Keyword && t.value != "WHERE" {

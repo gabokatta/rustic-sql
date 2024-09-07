@@ -31,7 +31,7 @@ const RESERVED_KEYWORDS: &[&str] = &[
 pub struct Tokenizer {
     i: usize,
     state: TokenizerState,
-    parenthesis_count: u8,
+    parenthesis_count: i8,
 }
 
 enum TokenizerState {

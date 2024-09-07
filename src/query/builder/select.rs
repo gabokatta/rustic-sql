@@ -2,7 +2,7 @@ use crate::query::builder::{unexpected_token_in_stage, validate_keywords, Builde
 use crate::query::errors::InvalidSQL;
 use crate::query::Operation::Select;
 use crate::query::OrderKind::{Asc, Desc};
-use crate::query::TokenKind::{Identifier, Keyword, Operator};
+use crate::query::TokenKind::{Identifier, Keyword};
 use crate::query::{Ordering, Query, Token};
 use std::collections::VecDeque;
 
@@ -21,12 +21,9 @@ impl SelectBuilder {
 
     fn parse_ordering(&mut self) -> Result<Vec<Ordering>, InvalidSQL> {
         let mut ordering = vec![];
-        if self.expect_keyword("ORDER BY").is_err() {
-            return Ok(ordering);
-        }
         while let Some(t) = self.tokens.pop_front() {
             if t.kind != Identifier {
-                unexpected_token_in_stage("ORDER_BY".to_string(), &t)?
+                unexpected_token_in_stage("ORDER_BY", &t)?
             }
             let mut new_order = Ordering::default();
             new_order.field = t;
@@ -49,13 +46,13 @@ impl Builder for SelectBuilder {
     fn build(&mut self) -> Result<Query, InvalidSQL> {
         let mut query = Query::default();
         self.validate_keywords()?;
-
         query.operation = Select;
         query.columns = self.parse_columns()?;
         query.table = self.parse_table(Select)?;
         query.conditions = self.parse_where()?;
-        query.ordering = self.parse_ordering()?;
-
+        if self.pop_expecting("ORDER BY", Keyword).is_ok() {
+            query.ordering = self.parse_ordering()?;
+        }
         Ok(query)
     }
 
