@@ -1,11 +1,11 @@
 use crate::errored;
-use crate::query::builder::expression::ExpressionNode::Leaf;
+use crate::query::builder::expression::ExpressionNode::{Empty, Leaf};
 use crate::query::builder::expression::ExpressionOperator::{
     Equals, GreaterOrEqual, GreaterThan, LessOrEqual, LessThan, NotEquals,
 };
 use crate::query::errors::InvalidSQL;
 use crate::query::errors::InvalidSQL::Syntax;
-use crate::query::TokenKind::{Keyword, ParenthesisClose};
+use crate::query::TokenKind::Keyword;
 use crate::query::{Token, TokenKind};
 use std::collections::VecDeque;
 
@@ -26,7 +26,7 @@ pub enum ExpressionOperator {
     Not,
 }
 
-#[derive(Default)]
+#[derive(Default, PartialEq)]
 pub enum ExpressionNode {
     #[default]
     Empty,
@@ -107,32 +107,27 @@ impl ExpressionBuilder {
     }
 
     fn parse_leaf(tokens: &mut VecDeque<Token>) -> Result<ExpressionNode, InvalidSQL> {
-        let t = tokens
-            .front()
-            .ok_or_else(|| Syntax("reached end of query while parsing comparisons.".to_string()))?;
-        match t.kind {
-            TokenKind::ParenthesisOpen => {
-                tokens.pop_front();
-                let expression = ExpressionBuilder::parse_expressions(tokens)?;
-                tokens
-                    .front()
-                    .filter(|t| t.kind == ParenthesisClose)
-                    .ok_or_else(|| {
-                        Syntax("unclosed parenthesis while evaluating WHERE.".to_string())
-                    })?;
-                tokens.pop_front();
-                Ok(expression)
+        let mut leaf = Empty;
+        while let Some(t) = tokens.front() {
+            match t.kind {
+                TokenKind::Identifier | TokenKind::Number | TokenKind::String => {
+                    if let Some(t) = tokens.pop_front() {
+                        leaf = Leaf(t);
+                        break;
+                    }
+                }
+                TokenKind::ParenthesisOpen => {
+                    tokens.pop_front();
+                    leaf = ExpressionBuilder::parse_expressions(tokens)?;
+                }
+                TokenKind::ParenthesisClose if leaf != Empty => {
+                    tokens.pop_front();
+                    break;
+                }
+                _ => errored!(Syntax, "unexpected token when parsing leaf: {:?}", t),
             }
-            TokenKind::Identifier | TokenKind::Number | TokenKind::String => tokens
-                .pop_front()
-                .map(Leaf)
-                .ok_or_else(|| Syntax("failed to parse leaf node".to_string())),
-            _ => errored!(
-                Syntax,
-                "unrecognized token while parsing comparison: {:?}.",
-                t
-            ),
         }
+        Ok(leaf)
     }
 
     fn parse_simple_operator(
