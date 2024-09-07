@@ -1,12 +1,12 @@
 pub mod builder;
 mod errors;
-mod executor;
+pub mod executor;
 pub mod tokenizer;
 
-use crate::errors::Errored;
 use crate::query::builder::expression::ExpressionNode;
 use crate::query::OrderKind::Asc;
 use crate::query::TokenKind::Unknown;
+use crate::utils::errors::Errored;
 use std::fmt::{Debug, Display, Formatter};
 
 pub struct Query {

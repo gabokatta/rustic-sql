@@ -1,13 +1,12 @@
+use crate::query::executor::Executor;
 use crate::query::tokenizer::Tokenizer;
 use crate::query::Query;
-use files::validate_path;
 use query::validate_query_string;
 use std::env;
 use std::error::Error;
 
-mod errors;
-mod files;
 mod query;
+mod utils;
 
 fn main() -> Result<(), Box<dyn Error>> {
     let args = env::args().collect();
@@ -17,7 +16,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     Ok(())
 }
 
-fn run(args: Vec<String>) -> Result<(), Box<dyn Error>> {
+fn run(args: Vec<String>) -> Result<Vec<String>, Box<dyn Error>> {
     if args.len() != 3 {
         println!("invalid usage of rustic-sql");
         return Err("usage: cargo run -- <path-to-tables> <sql-query>".into());
@@ -25,19 +24,11 @@ fn run(args: Vec<String>) -> Result<(), Box<dyn Error>> {
 
     let path: &String = &args[1];
     let query: &String = &args[2];
-
-    validate_path(path)?;
     validate_query_string(query)?;
 
-    let mut tokenizer = Tokenizer::new();
-
-    let tokens = tokenizer.tokenize(query)?;
-    for t in &tokens {
-        println!("{:?}", &t)
-    }
-
+    let tokens = Tokenizer::new().tokenize(query)?;
     let query = Query::from(tokens)?;
     println!("\n{:?}", &query);
-
-    Ok(())
+    let result = Executor::run(path, query)?;
+    Ok(result)
 }
