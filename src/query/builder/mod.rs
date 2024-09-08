@@ -23,14 +23,12 @@ pub trait Builder {
     fn tokens(&mut self) -> &mut VecDeque<Token>;
 
     fn parse_table(&mut self, operation: Operation) -> Result<String, Errored> {
-        if let Some(t) = self.tokens().front() {
-            match operation {
-                Select | Delete => {
-                    self.peek_expecting("FROM", Keyword)?;
-                    self.tokens().pop_front();
-                }
-                _ => {}
+        match operation {
+            Select | Delete => {
+                self.peek_expecting("FROM", Keyword)?;
+                self.tokens().pop_front();
             }
+            _ => {}
         }
         let t = self
             .tokens()

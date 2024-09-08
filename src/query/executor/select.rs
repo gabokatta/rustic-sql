@@ -1,4 +1,5 @@
 use crate::query::executor::Executor;
+use crate::query::structs::comparator::ExpressionComparator;
 use crate::query::structs::expression::ExpressionNode;
 use crate::query::structs::ordering::OrderKind;
 use crate::query::structs::row::Row;
@@ -35,8 +36,12 @@ impl Executor {
                 let r = ExpressionNode::get_variable_value(&b.values, &order.field);
                 if let (Ok(a), Ok(b)) = (l, r) {
                     return match order.kind {
-                        OrderKind::Asc => a.compare(&b).unwrap_or(Ordering::Equal),
-                        OrderKind::Desc => b.compare(&a).unwrap_or(Ordering::Equal),
+                        OrderKind::Asc => {
+                            ExpressionComparator::cmp(&a, &b).unwrap_or(Ordering::Equal)
+                        }
+                        OrderKind::Desc => {
+                            ExpressionComparator::cmp(&b, &a).unwrap_or(Ordering::Equal)
+                        }
                     };
                 }
                 Ordering::Equal
