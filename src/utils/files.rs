@@ -5,6 +5,13 @@ use std::fs::File;
 use std::path::Path;
 
 const CSV_EXTENSION: &str = ".csv";
+const CSV_SEPARATOR: &str = ",";
+
+pub fn read_csv_line(line: &str) -> Vec<&str> {
+    line.split(CSV_SEPARATOR)
+        .map(|s| s.trim())
+        .collect::<Vec<&str>>()
+}
 
 pub fn validate_path(dir: &str) -> Result<&Path, Errored> {
     let path = Path::new(dir);
