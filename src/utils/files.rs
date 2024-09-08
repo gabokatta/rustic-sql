@@ -2,15 +2,22 @@ use crate::errored;
 use crate::utils::errors::Errored;
 use crate::utils::errors::Errored::{Default, Table};
 use std::fs::File;
+use std::io::{BufRead, BufReader};
 use std::path::Path;
 
 const CSV_EXTENSION: &str = ".csv";
 const CSV_SEPARATOR: &str = ",";
 
-pub fn read_csv_line(line: &str) -> Vec<&str> {
+pub fn extract_header(reader: &mut BufReader<File>) -> Result<Vec<String>, Errored> {
+    let mut header = String::new();
+    reader.read_line(&mut header)?;
+    Ok(split_csv(&header))
+}
+
+pub fn split_csv(line: &str) -> Vec<String> {
     line.split(CSV_SEPARATOR)
-        .map(|s| s.trim())
-        .collect::<Vec<&str>>()
+        .map(|s| s.trim().to_string())
+        .collect::<Vec<String>>()
 }
 
 pub fn validate_path(dir: &str) -> Result<&Path, Errored> {

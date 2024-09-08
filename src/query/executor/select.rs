@@ -1,22 +1,26 @@
 use crate::query::executor::Executor;
+use crate::query::structs::row::Row;
 use crate::utils::errors::Errored;
-use crate::utils::files::read_csv_line;
+use crate::utils::files::{extract_header, split_csv};
 use std::fs::File;
 use std::io::{BufRead, BufReader};
 
 impl Executor {
     pub fn run_select(&mut self, table: File) -> Result<(), Errored> {
         let mut reader = BufReader::new(table);
-
-        let mut header = String::new();
-        reader.read_line(&mut header)?;
-        let header_fields = read_csv_line(&header);
-        println!("{}", header_fields.join(", "));
+        let header = extract_header(&mut reader)?;
+        println!("{}", header.join(","));
+        let mut matched_rows: Vec<Row> = vec![];
         for line in reader.lines() {
             let l = line?;
-            println!("{:?}", read_csv_line(&l));
+            let fields = split_csv(&l);
+            let mut row = Row::new(&header);
+            row.set_new_values(fields)?;
+            if row.matches_condition(&self.query)? {
+                matched_rows.push(row)
+            }
         }
-
+        //todo: implement ordering.
         Ok(())
     }
 }

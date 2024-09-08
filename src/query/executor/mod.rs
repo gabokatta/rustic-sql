@@ -2,8 +2,8 @@ use crate::errored;
 use crate::query::structs::operation::Operation::*;
 use crate::query::structs::query::Query;
 use crate::utils::errors::Errored;
-use crate::utils::errors::Errored::{Syntax, Table};
-use crate::utils::files::{get_table_file, read_csv_line};
+use crate::utils::errors::Errored::Syntax;
+use crate::utils::files::get_table_file;
 use std::collections::HashMap;
 
 mod delete;

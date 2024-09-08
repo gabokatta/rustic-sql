@@ -34,6 +34,7 @@ pub enum ExpressionOperator {
     Not,
 }
 
+#[derive(Debug, PartialEq)]
 pub enum ExpressionResult {
     Int(i64),
     Str(String),
