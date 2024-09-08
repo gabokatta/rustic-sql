@@ -76,7 +76,7 @@ impl ExpressionNode {
         }
     }
 
-    fn get_variable_value(
+    pub fn get_variable_value(
         values: &HashMap<String, String>,
         t: &Token,
     ) -> Result<ExpressionResult, Errored> {

@@ -1,5 +1,5 @@
 use crate::errored;
-use crate::query::structs::expression::ExpressionResult::Bool;
+use crate::query::structs::expression::ExpressionResult::{Bool, Int, Str};
 use crate::query::structs::expression::{ExpressionOperator, ExpressionResult};
 use crate::utils::errors::Errored;
 use crate::utils::errors::Errored::Syntax;
@@ -49,6 +49,22 @@ impl ExpressionComparator {
             ExpressionOperator::Or => Ok(Bool(l || r)),
             ExpressionOperator::Not => Ok(Bool(!l)),
             _ => errored!(Syntax, "invalid comparison for bool: {:?}", op),
+        }
+    }
+}
+
+impl ExpressionResult {
+    pub fn compare(&self, other: &ExpressionResult) -> Result<std::cmp::Ordering, Errored> {
+        match (self, other) {
+            (Int(a), Int(b)) => Ok(a.cmp(b)),
+            (Str(a), Str(b)) => Ok(a.cmp(b)),
+            (Bool(a), Bool(b)) => Ok(a.cmp(b)),
+            _ => errored!(
+                Syntax,
+                "Cannot compare different types: {:?} and {:?}",
+                self,
+                other
+            ),
         }
     }
 }

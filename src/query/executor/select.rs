@@ -1,7 +1,10 @@
 use crate::query::executor::Executor;
+use crate::query::structs::expression::ExpressionNode;
+use crate::query::structs::ordering::OrderKind;
 use crate::query::structs::row::Row;
 use crate::utils::errors::Errored;
 use crate::utils::files::{extract_header, split_csv};
+use std::cmp::Ordering;
 use std::fs::File;
 use std::io::{BufRead, BufReader};
 
@@ -20,7 +23,30 @@ impl Executor {
                 matched_rows.push(row)
             }
         }
-        //todo: implement ordering.
+        self.sort_rows(&mut matched_rows);
+        self.output_rows(&matched_rows);
         Ok(())
+    }
+
+    fn sort_rows(&mut self, matched_rows: &mut [Row]) {
+        for order in &self.query.ordering {
+            matched_rows.sort_by(|a, b| {
+                let l = ExpressionNode::get_variable_value(&a.values, &order.field);
+                let r = ExpressionNode::get_variable_value(&b.values, &order.field);
+                if let (Ok(a), Ok(b)) = (l, r) {
+                    return match order.kind {
+                        OrderKind::Asc => a.compare(&b).unwrap_or(Ordering::Equal),
+                        OrderKind::Desc => b.compare(&a).unwrap_or(Ordering::Equal),
+                    };
+                }
+                Ordering::Equal
+            })
+        }
+    }
+
+    fn output_rows(&self, matched_rows: &[Row]) {
+        for row in matched_rows {
+            row.print_values()
+        }
     }
 }

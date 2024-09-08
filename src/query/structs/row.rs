@@ -4,7 +4,6 @@ use crate::query::structs::query::Query;
 use crate::utils::errors::Errored;
 use crate::utils::errors::Errored::{Column, Syntax, Table};
 use std::collections::HashMap;
-use std::fmt::{Debug, Display};
 
 pub struct Row<'a> {
     pub header: &'a Vec<String>,
@@ -19,7 +18,7 @@ impl<'a> Row<'a> {
         }
     }
 
-    pub fn insert(&mut self, key: &str, value: String) -> Result<(), Errored> {
+    fn insert(&mut self, key: &str, value: String) -> Result<(), Errored> {
         if self.header.contains(&key.to_string()) {
             self.values.insert(key.to_string(), value);
         } else {
@@ -43,7 +42,7 @@ impl<'a> Row<'a> {
             );
         }
         for (key, value) in self.header.iter().zip(values) {
-            self.values.insert(key.to_string(), value);
+            self.insert(key, value)?;
         }
         Ok(())
     }
