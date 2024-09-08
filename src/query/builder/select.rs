@@ -1,11 +1,11 @@
 use crate::query::builder::{unexpected_token_in_stage, validate_keywords, Builder};
-use crate::query::errors::InvalidSQL;
 use crate::query::structs::operation::Operation::Select;
 use crate::query::structs::ordering::OrderKind::{Asc, Desc};
 use crate::query::structs::ordering::Ordering;
 use crate::query::structs::query::Query;
 use crate::query::structs::token::Token;
 use crate::query::structs::token::TokenKind::{Identifier, Keyword};
+use crate::utils::errors::Errored;
 use std::collections::VecDeque;
 
 const ALLOWED_KEYWORDS: &[&str] = &[
@@ -21,7 +21,7 @@ impl SelectBuilder {
         Self { tokens }
     }
 
-    fn parse_ordering(&mut self) -> Result<Vec<Ordering>, InvalidSQL> {
+    fn parse_ordering(&mut self) -> Result<Vec<Ordering>, Errored> {
         let mut ordering = vec![];
         while let Some(t) = self.tokens.pop_front() {
             if t.kind != Identifier {
@@ -45,7 +45,7 @@ impl SelectBuilder {
 }
 
 impl Builder for SelectBuilder {
-    fn build(&mut self) -> Result<Query, InvalidSQL> {
+    fn build(&mut self) -> Result<Query, Errored> {
         let mut query = Query::default();
         self.validate_keywords()?;
         query.operation = Select;
@@ -68,7 +68,7 @@ impl Builder for SelectBuilder {
         &mut self.tokens
     }
 
-    fn validate_keywords(&self) -> Result<(), InvalidSQL> {
+    fn validate_keywords(&self) -> Result<(), Errored> {
         validate_keywords(ALLOWED_KEYWORDS, &self.tokens, Select)
     }
 }

@@ -1,11 +1,11 @@
 use crate::errored;
-use crate::query::errors::InvalidSQL;
-use crate::query::errors::InvalidSQL::Syntax;
 use crate::query::structs::token::TokenKind::{
     Identifier, Keyword, Number, ParenthesisClose, ParenthesisOpen, Unknown,
 };
 use crate::query::structs::token::{Token, TokenKind};
 use crate::query::tokenizer::TokenizerState::*;
+use crate::utils::errors::Errored;
+use crate::utils::errors::Errored::Syntax;
 
 const VALID_OPERATORS: &[&str] = &["*", "=", "<", ">", "!", ">=", "<=", "!="];
 
@@ -54,7 +54,7 @@ impl Tokenizer {
         }
     }
 
-    pub fn tokenize(&mut self, sql: &str) -> Result<Vec<Token>, InvalidSQL> {
+    pub fn tokenize(&mut self, sql: &str) -> Result<Vec<Token>, Errored> {
         let mut out = vec![];
         let mut token = Token::default();
         while self.i < sql.len() {
@@ -85,7 +85,7 @@ impl Tokenizer {
         Ok(out)
     }
 
-    fn next_state(&mut self, c: char) -> Result<(), InvalidSQL> {
+    fn next_state(&mut self, c: char) -> Result<(), Errored> {
         match c {
             c if can_be_skipped(c) => self.i += c.len_utf8(),
             c if c.is_ascii_digit() => self.state = NumberLiteral,
@@ -104,7 +104,7 @@ impl Tokenizer {
         Ok(())
     }
 
-    fn tokenize_parenthesis(&mut self, sql: &str) -> Result<Token, InvalidSQL> {
+    fn tokenize_parenthesis(&mut self, sql: &str) -> Result<Token, Errored> {
         let c = char_at(self.i, sql);
         let mut token = Token::default();
         if c == '(' {
@@ -123,7 +123,7 @@ impl Tokenizer {
         Ok(token)
     }
 
-    fn tokenize_identifier_or_keyword(&mut self, sql: &str) -> Result<Token, InvalidSQL> {
+    fn tokenize_identifier_or_keyword(&mut self, sql: &str) -> Result<Token, Errored> {
         if let Some(word) = self.matches_keyword(sql) {
             self.i += word.len();
             self.state = Complete;
@@ -135,11 +135,11 @@ impl Tokenizer {
         self.tokenize_kind(sql, Identifier, is_identifier_char)
     }
 
-    fn tokenize_number(&mut self, sql: &str) -> Result<Token, InvalidSQL> {
+    fn tokenize_number(&mut self, sql: &str) -> Result<Token, Errored> {
         self.tokenize_kind(sql, Number, |c| c.is_ascii_digit())
     }
 
-    fn tokenize_operator(&mut self, sql: &str) -> Result<Token, InvalidSQL> {
+    fn tokenize_operator(&mut self, sql: &str) -> Result<Token, Errored> {
         if let Some(op) = self.matches_operator(sql) {
             self.i += op.len();
             self.state = Complete;
@@ -157,7 +157,7 @@ impl Tokenizer {
         }
     }
 
-    fn tokenize_quoted(&mut self, sql: &str) -> Result<Token, InvalidSQL> {
+    fn tokenize_quoted(&mut self, sql: &str) -> Result<Token, Errored> {
         let start = self.i;
         for (index, char) in sql[start..].char_indices() {
             if char == '\'' {
@@ -209,7 +209,7 @@ impl Tokenizer {
         sql: &str,
         output_kind: TokenKind,
         matches_kind: F,
-    ) -> Result<Token, InvalidSQL>
+    ) -> Result<Token, Errored>
     where
         F: Fn(char) -> bool,
     {

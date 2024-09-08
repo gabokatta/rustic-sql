@@ -1,23 +1,21 @@
 use crate::errored;
-use crate::query::errors::InvalidSQL;
-use crate::query::errors::InvalidSQL::Syntax;
 use crate::query::structs::expression::ExpressionNode::{Empty, Leaf};
-use crate::query::structs::expression::ExpressionOperator::{
-    Equals, GreaterOrEqual, GreaterThan, LessOrEqual, LessThan, NotEquals,
-};
+use crate::query::structs::expression::ExpressionOperator::*;
 use crate::query::structs::expression::{ExpressionNode, ExpressionOperator};
 use crate::query::structs::token::TokenKind::Keyword;
 use crate::query::structs::token::{Token, TokenKind};
+use crate::utils::errors::Errored;
+use crate::utils::errors::Errored::Syntax;
 use std::collections::VecDeque;
 
 pub struct ExpressionBuilder;
 
 impl ExpressionBuilder {
-    pub fn parse_expressions(tokens: &mut VecDeque<Token>) -> Result<ExpressionNode, InvalidSQL> {
+    pub fn parse_expressions(tokens: &mut VecDeque<Token>) -> Result<ExpressionNode, Errored> {
         ExpressionBuilder::parse_or(tokens)
     }
 
-    fn parse_or(tokens: &mut VecDeque<Token>) -> Result<ExpressionNode, InvalidSQL> {
+    fn parse_or(tokens: &mut VecDeque<Token>) -> Result<ExpressionNode, Errored> {
         let mut left = ExpressionBuilder::parse_and(tokens)?;
         while let Some(t) = tokens.front() {
             if t.kind != Keyword || t.value != "OR" {
@@ -26,7 +24,7 @@ impl ExpressionBuilder {
             tokens.pop_front();
             let right = ExpressionBuilder::parse_and(tokens)?;
             left = ExpressionNode::Statement {
-                operator: ExpressionOperator::Or,
+                operator: Or,
                 left: Box::new(left),
                 right: Box::new(right),
             };
@@ -34,7 +32,7 @@ impl ExpressionBuilder {
         Ok(left)
     }
 
-    fn parse_and(tokens: &mut VecDeque<Token>) -> Result<ExpressionNode, InvalidSQL> {
+    fn parse_and(tokens: &mut VecDeque<Token>) -> Result<ExpressionNode, Errored> {
         let mut left = ExpressionBuilder::parse_not(tokens)?;
         while let Some(t) = tokens.front() {
             if t.kind != Keyword || t.value != "AND" {
@@ -43,7 +41,7 @@ impl ExpressionBuilder {
             tokens.pop_front();
             let right = ExpressionBuilder::parse_not(tokens)?;
             left = ExpressionNode::Statement {
-                operator: ExpressionOperator::And,
+                operator: And,
                 left: Box::new(left),
                 right: Box::new(right),
             };
@@ -51,13 +49,13 @@ impl ExpressionBuilder {
         Ok(left)
     }
 
-    fn parse_not(tokens: &mut VecDeque<Token>) -> Result<ExpressionNode, InvalidSQL> {
+    fn parse_not(tokens: &mut VecDeque<Token>) -> Result<ExpressionNode, Errored> {
         if let Some(t) = tokens.front() {
             if t.kind == Keyword && t.value == "NOT" {
                 tokens.pop_front();
                 let node = ExpressionBuilder::parse_comparisons(tokens)?;
                 return Ok(ExpressionNode::Statement {
-                    operator: ExpressionOperator::Not,
+                    operator: Not,
                     left: Box::new(node),
                     right: Box::new(Empty),
                 });
@@ -66,7 +64,7 @@ impl ExpressionBuilder {
         ExpressionBuilder::parse_comparisons(tokens)
     }
 
-    fn parse_comparisons(tokens: &mut VecDeque<Token>) -> Result<ExpressionNode, InvalidSQL> {
+    fn parse_comparisons(tokens: &mut VecDeque<Token>) -> Result<ExpressionNode, Errored> {
         let left = ExpressionBuilder::parse_leaf(tokens)?;
         let operator = ExpressionBuilder::parse_simple_operator(tokens);
         if operator.is_err() {
@@ -80,7 +78,7 @@ impl ExpressionBuilder {
         })
     }
 
-    fn parse_leaf(tokens: &mut VecDeque<Token>) -> Result<ExpressionNode, InvalidSQL> {
+    fn parse_leaf(tokens: &mut VecDeque<Token>) -> Result<ExpressionNode, Errored> {
         let mut leaf = Empty;
         while let Some(t) = tokens.front() {
             match t.kind {
@@ -104,9 +102,7 @@ impl ExpressionBuilder {
         Ok(leaf)
     }
 
-    fn parse_simple_operator(
-        tokens: &mut VecDeque<Token>,
-    ) -> Result<ExpressionOperator, InvalidSQL> {
+    fn parse_simple_operator(tokens: &mut VecDeque<Token>) -> Result<ExpressionOperator, Errored> {
         let t = tokens
             .front()
             .ok_or_else(|| Syntax("expected operator but was end of query.".to_string()))?;

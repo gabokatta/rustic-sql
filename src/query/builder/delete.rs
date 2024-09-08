@@ -1,9 +1,9 @@
 use crate::query::builder::{validate_keywords, Builder};
-use crate::query::errors::InvalidSQL;
 use crate::query::structs::operation::Operation::Delete;
 use crate::query::structs::query::Query;
 use crate::query::structs::token::Token;
 use crate::query::structs::token::TokenKind::Keyword;
+use crate::utils::errors::Errored;
 use std::collections::VecDeque;
 
 const ALLOWED_KEYWORDS: &[&str] = &["FROM", "WHERE", "AND", "OR"];
@@ -19,7 +19,7 @@ impl DeleteBuilder {
 }
 
 impl Builder for DeleteBuilder {
-    fn build(&mut self) -> Result<Query, InvalidSQL> {
+    fn build(&mut self) -> Result<Query, Errored> {
         let mut query = Query::default();
         self.validate_keywords()?;
         query.operation = Delete;
@@ -37,7 +37,7 @@ impl Builder for DeleteBuilder {
         &mut self.tokens
     }
 
-    fn validate_keywords(&self) -> Result<(), InvalidSQL> {
+    fn validate_keywords(&self) -> Result<(), Errored> {
         validate_keywords(ALLOWED_KEYWORDS, &self.tokens, Delete)
     }
 }

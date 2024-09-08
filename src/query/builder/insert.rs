@@ -1,9 +1,9 @@
 use crate::query::builder::{unexpected_token_in_stage, validate_keywords, Builder};
-use crate::query::errors::InvalidSQL;
 use crate::query::structs::operation::Operation::Insert;
 use crate::query::structs::query::Query;
 use crate::query::structs::token::TokenKind::{Keyword, ParenthesisClose, ParenthesisOpen};
 use crate::query::structs::token::{Token, TokenKind};
+use crate::utils::errors::Errored;
 use std::collections::VecDeque;
 
 const ALLOWED_KEYWORDS: &[&str] = &["VALUES"];
@@ -17,7 +17,7 @@ impl InsertBuilder {
         Self { tokens }
     }
 
-    fn parse_insert_values(&mut self) -> Result<Vec<Token>, InvalidSQL> {
+    fn parse_insert_values(&mut self) -> Result<Vec<Token>, Errored> {
         self.pop_expecting("VALUES", Keyword)?;
         self.peek_expecting("(", ParenthesisOpen)?;
         let mut values = vec![];
@@ -42,7 +42,7 @@ impl InsertBuilder {
 }
 
 impl Builder for InsertBuilder {
-    fn build(&mut self) -> Result<Query, InvalidSQL> {
+    fn build(&mut self) -> Result<Query, Errored> {
         let mut query = Query::default();
         self.validate_keywords()?;
         query.operation = Insert;
@@ -58,7 +58,7 @@ impl Builder for InsertBuilder {
         &mut self.tokens
     }
 
-    fn validate_keywords(&self) -> Result<(), InvalidSQL> {
+    fn validate_keywords(&self) -> Result<(), Errored> {
         validate_keywords(ALLOWED_KEYWORDS, &self.tokens, Insert)
     }
 }

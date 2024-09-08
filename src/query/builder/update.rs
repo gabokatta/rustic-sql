@@ -1,13 +1,13 @@
 use crate::errored;
 use crate::query::builder::expression::ExpressionBuilder;
 use crate::query::builder::{validate_keywords, Builder};
-use crate::query::errors::InvalidSQL;
-use crate::query::errors::InvalidSQL::Syntax;
 use crate::query::structs::expression::ExpressionNode;
 use crate::query::structs::operation::Operation::Update;
 use crate::query::structs::query::Query;
 use crate::query::structs::token::Token;
 use crate::query::structs::token::TokenKind::Keyword;
+use crate::utils::errors::Errored;
+use crate::utils::errors::Errored::Syntax;
 use std::collections::VecDeque;
 
 const ALLOWED_KEYWORDS: &[&str] = &["SET", "WHERE", "AND", "OR"];
@@ -21,7 +21,7 @@ impl UpdateBuilder {
         Self { tokens }
     }
 
-    fn parse_updates(&mut self) -> Result<Vec<ExpressionNode>, InvalidSQL> {
+    fn parse_updates(&mut self) -> Result<Vec<ExpressionNode>, Errored> {
         self.pop_expecting("SET", Keyword)?;
         let mut updates = vec![];
         while let Some(t) = self.tokens.front() {
@@ -44,7 +44,7 @@ impl UpdateBuilder {
 }
 
 impl Builder for UpdateBuilder {
-    fn build(&mut self) -> Result<Query, InvalidSQL> {
+    fn build(&mut self) -> Result<Query, Errored> {
         let mut query = Query::default();
         self.validate_keywords()?;
         query.operation = Update;
@@ -63,7 +63,7 @@ impl Builder for UpdateBuilder {
         &mut self.tokens
     }
 
-    fn validate_keywords(&self) -> Result<(), InvalidSQL> {
+    fn validate_keywords(&self) -> Result<(), Errored> {
         validate_keywords(ALLOWED_KEYWORDS, &self.tokens, Update)
     }
 }

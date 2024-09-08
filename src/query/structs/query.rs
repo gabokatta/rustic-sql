@@ -4,24 +4,24 @@ use crate::query::builder::insert::InsertBuilder;
 use crate::query::builder::select::SelectBuilder;
 use crate::query::builder::update::UpdateBuilder;
 use crate::query::builder::{get_kind, Builder};
-use crate::query::errors::InvalidSQL;
-use crate::query::errors::InvalidSQL::Syntax;
 use crate::query::structs::expression::ExpressionNode;
 use crate::query::structs::operation::Operation;
 use crate::query::structs::operation::Operation::{Delete, Insert, Select, Unknown, Update};
 use crate::query::structs::ordering::Ordering;
 use crate::query::structs::token::Token;
+use crate::utils::errors::Errored;
+use crate::utils::errors::Errored::Syntax;
 use std::collections::VecDeque;
 use std::fmt::{Debug, Display, Formatter};
 
 pub struct Query {
     pub operation: Operation,
     pub table: String,
-    pub(crate) columns: Vec<Token>,
-    pub(crate) inserts: Vec<Token>,
-    pub(crate) updates: Vec<ExpressionNode>,
-    pub(crate) conditions: ExpressionNode,
-    pub(crate) ordering: Vec<Ordering>,
+    pub columns: Vec<Token>,
+    pub inserts: Vec<Token>,
+    pub updates: Vec<ExpressionNode>,
+    pub conditions: ExpressionNode,
+    pub ordering: Vec<Ordering>,
 }
 
 impl Query {
@@ -37,7 +37,7 @@ impl Query {
         }
     }
 
-    pub fn from(tokens: Vec<Token>) -> Result<Self, InvalidSQL> {
+    pub fn from(tokens: Vec<Token>) -> Result<Self, Errored> {
         let mut tokens = VecDeque::from(tokens);
         let kind = get_kind(tokens.pop_front());
         match kind {
