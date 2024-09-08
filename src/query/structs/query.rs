@@ -62,6 +62,13 @@ impl Display for Query {
             writeln!(f, "   {:?}", values)?;
         }
         writeln!(f, "}} ")?;
+        writeln!(f, "Updates {{ ")?;
+        for up in &self.updates {
+            if let Ok((l, r)) = up.as_leaf_tuple() {
+                writeln!(f, "   {} -> {}", l.value, r.value)?;
+            }
+        }
+        writeln!(f, "}} ")?;
         writeln!(f, "Updates: {:?}", self.updates)?;
         writeln!(f, "Conditions: {:?}", self.conditions)?;
         writeln!(f, "Ordering: {:?}", self.ordering)

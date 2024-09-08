@@ -51,12 +51,12 @@ impl Display for Errored {
 
 impl From<io::Error> for Errored {
     fn from(value: io::Error) -> Self {
-        Default(format!("[IO]: {}", value))
+        Default(format!("IO - {}", value))
     }
 }
 
 impl From<ParseIntError> for Errored {
     fn from(value: ParseIntError) -> Self {
-        Default(format!("[PARSE_INT]: {}", value))
+        Default(format!("PARSE_INT - {}", value))
     }
 }

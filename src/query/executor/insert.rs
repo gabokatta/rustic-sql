@@ -3,6 +3,7 @@ use crate::utils::errors::Errored;
 
 impl Executor {
     pub fn run_insert(&self) -> Result<(), Errored> {
-        todo!()
+        //delete_temp_file(&self.table_path)?;
+        Ok(())
     }
 }

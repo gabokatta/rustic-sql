@@ -1,8 +1,8 @@
 use crate::errored;
-use crate::query::structs::expression::ExpressionResult;
+use crate::query::structs::expression::{ExpressionNode, ExpressionResult};
 use crate::query::structs::query::Query;
 use crate::utils::errors::Errored;
-use crate::utils::errors::Errored::{Column, Syntax, Table};
+use crate::utils::errors::Errored::{Column, Default, Syntax, Table};
 use std::collections::HashMap;
 
 pub struct Row<'a> {
@@ -39,8 +39,16 @@ impl<'a> Row<'a> {
         Ok(())
     }
 
-    pub fn update_value(&mut self, key: String, value: String) -> Result<(), Errored> {
-        self.insert(&key, value)?;
+    pub fn update_values(&mut self, updates: &Vec<ExpressionNode>) -> Result<(), Errored> {
+        for up in updates {
+            if let Ok((field, value)) = up.as_leaf_tuple() {
+                let k = &field.value;
+                let v = &value.value;
+                self.insert(k, v.to_string())?
+            } else {
+                errored!(Default, "error while updating values.")
+            }
+        }
         Ok(())
     }
 

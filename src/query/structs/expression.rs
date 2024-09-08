@@ -3,7 +3,7 @@ use crate::query::structs::comparator::ExpressionComparator;
 use crate::query::structs::expression::ExpressionResult::{Bool, Int, Str};
 use crate::query::structs::token::{Token, TokenKind};
 use crate::utils::errors::Errored;
-use crate::utils::errors::Errored::{Column, Syntax};
+use crate::utils::errors::Errored::{Column, Default, Syntax};
 use std::collections::HashMap;
 use std::fmt::{Debug, Formatter};
 
@@ -90,6 +90,16 @@ impl ExpressionNode {
                 }
             }
             None => errored!(Column, "column {} does not exist", t.value),
+        }
+    }
+
+    pub fn as_leaf_tuple(&self) -> Result<(&Token, &Token), Errored> {
+        match self {
+            ExpressionNode::Statement { left, right, .. } => match (&**left, &**right) {
+                (ExpressionNode::Leaf(l), ExpressionNode::Leaf(r)) => Ok((l, r)),
+                _ => errored!(Default, "both sides of expression must be leaf nodes."),
+            },
+            _ => errored!(Default, "expected a statement, but got: {:?}", self),
         }
     }
 }
