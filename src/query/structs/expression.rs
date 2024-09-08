@@ -3,7 +3,7 @@ use crate::query::structs::comparator::ExpressionComparator;
 use crate::query::structs::expression::ExpressionResult::{Bool, Int, Str};
 use crate::query::structs::token::{Token, TokenKind};
 use crate::utils::errors::Errored;
-use crate::utils::errors::Errored::Syntax;
+use crate::utils::errors::Errored::{Column, Syntax};
 use std::collections::HashMap;
 use std::fmt::{Debug, Formatter};
 
@@ -88,7 +88,7 @@ impl ExpressionNode {
                     Ok(Str(v.to_string()))
                 }
             }
-            None => Ok(Bool(false)),
+            None => errored!(Column, "column {} does not exist", t.value),
         }
     }
 }
