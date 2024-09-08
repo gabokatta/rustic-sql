@@ -71,7 +71,7 @@ impl ExpressionNode {
             (Int(l), Int(r)) => ExpressionComparator::compare_ints(l, r, operator),
             (Str(l), Str(r)) => ExpressionComparator::compare_str(&l, &r, operator),
             (Bool(l), Bool(r)) => ExpressionComparator::compare_bools(l, r, operator),
-            _ => errored!(Syntax, ""),
+            _ => errored!(Syntax, "expression members must match in type."),
         }
     }
 
