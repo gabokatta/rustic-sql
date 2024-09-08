@@ -1,10 +1,9 @@
-use crate::errored;
 use crate::query::builder::{unexpected_token_in_stage, validate_keywords, Builder};
 use crate::query::errors::InvalidSQL;
-use crate::query::errors::InvalidSQL::Syntax;
-use crate::query::Operation::Insert;
-use crate::query::TokenKind::{Keyword, ParenthesisClose, ParenthesisOpen};
-use crate::query::{Query, Token, TokenKind};
+use crate::query::structs::operation::Operation::Insert;
+use crate::query::structs::query::Query;
+use crate::query::structs::token::TokenKind::{Keyword, ParenthesisClose, ParenthesisOpen};
+use crate::query::structs::token::{Token, TokenKind};
 use std::collections::VecDeque;
 
 const ALLOWED_KEYWORDS: &[&str] = &["VALUES"];

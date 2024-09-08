@@ -1,11 +1,13 @@
 use crate::errored;
-use crate::query::builder::expression::{ExpressionBuilder, ExpressionNode};
-use crate::query::builder::{unexpected_token_in_stage, validate_keywords, Builder};
+use crate::query::builder::expression::ExpressionBuilder;
+use crate::query::builder::{validate_keywords, Builder};
 use crate::query::errors::InvalidSQL;
 use crate::query::errors::InvalidSQL::Syntax;
-use crate::query::Operation::Update;
-use crate::query::TokenKind::Keyword;
-use crate::query::{Query, Token};
+use crate::query::structs::expression::ExpressionNode;
+use crate::query::structs::operation::Operation::Update;
+use crate::query::structs::query::Query;
+use crate::query::structs::token::Token;
+use crate::query::structs::token::TokenKind::Keyword;
 use std::collections::VecDeque;
 
 const ALLOWED_KEYWORDS: &[&str] = &["SET", "WHERE", "AND", "OR"];

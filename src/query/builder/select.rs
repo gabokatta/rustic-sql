@@ -1,9 +1,11 @@
 use crate::query::builder::{unexpected_token_in_stage, validate_keywords, Builder};
 use crate::query::errors::InvalidSQL;
-use crate::query::Operation::Select;
-use crate::query::OrderKind::{Asc, Desc};
-use crate::query::TokenKind::{Identifier, Keyword};
-use crate::query::{Ordering, Query, Token};
+use crate::query::structs::operation::Operation::Select;
+use crate::query::structs::ordering::OrderKind::{Asc, Desc};
+use crate::query::structs::ordering::Ordering;
+use crate::query::structs::query::Query;
+use crate::query::structs::token::Token;
+use crate::query::structs::token::TokenKind::{Identifier, Keyword};
 use std::collections::VecDeque;
 
 const ALLOWED_KEYWORDS: &[&str] = &[

@@ -1,20 +1,21 @@
-mod delete;
+pub mod delete;
 pub mod expression;
-mod insert;
-mod select;
-mod update;
+pub mod insert;
+pub mod select;
+pub mod update;
 
 use crate::errored;
-use crate::query::builder::delete::DeleteBuilder;
-use crate::query::builder::expression::{ExpressionBuilder, ExpressionNode};
-use crate::query::builder::insert::InsertBuilder;
-use crate::query::builder::select::SelectBuilder;
-use crate::query::builder::update::UpdateBuilder;
+use crate::query::builder::expression::ExpressionBuilder;
 use crate::query::errors::InvalidSQL;
 use crate::query::errors::InvalidSQL::Syntax;
-use crate::query::Operation::{Delete, Insert, Select, Unknown, Update};
-use crate::query::TokenKind::{Identifier, Keyword, Operator, ParenthesisClose, ParenthesisOpen};
-use crate::query::{Operation, Query, Token, TokenKind};
+use crate::query::structs::expression::ExpressionNode;
+use crate::query::structs::operation::Operation;
+use crate::query::structs::operation::Operation::{Delete, Insert, Select, Unknown, Update};
+use crate::query::structs::query::Query;
+use crate::query::structs::token::TokenKind::{
+    Identifier, Keyword, Operator, ParenthesisClose, ParenthesisOpen,
+};
+use crate::query::structs::token::{Token, TokenKind};
 use std::collections::VecDeque;
 
 pub trait Builder {
@@ -101,21 +102,7 @@ pub trait Builder {
     fn validate_keywords(&self) -> Result<(), InvalidSQL>;
 }
 
-impl Query {
-    pub fn from(tokens: Vec<Token>) -> Result<Self, InvalidSQL> {
-        let mut tokens = VecDeque::from(tokens);
-        let kind = get_kind(tokens.pop_front());
-        match kind {
-            Unknown => errored!(Syntax, "query does not start with a valid operation."),
-            Select => SelectBuilder::new(tokens).build(),
-            Update => UpdateBuilder::new(tokens).build(),
-            Delete => DeleteBuilder::new(tokens).build(),
-            Insert => InsertBuilder::new(tokens).build(),
-        }
-    }
-}
-
-fn get_kind(token: Option<Token>) -> Operation {
+pub fn get_kind(token: Option<Token>) -> Operation {
     match token {
         Some(t) => match t.value.as_str() {
             "SELECT" => Select,

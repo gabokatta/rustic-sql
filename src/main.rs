@@ -1,6 +1,6 @@
 use crate::query::executor::Executor;
+use crate::query::structs::query::Query;
 use crate::query::tokenizer::Tokenizer;
-use crate::query::Query;
 use query::validate_query_string;
 use std::env;
 use std::error::Error;
@@ -30,5 +30,5 @@ fn run(args: Vec<String>) -> Result<Vec<String>, Box<dyn Error>> {
     let query = Query::from(tokens)?;
     println!("\n{:?}", &query);
     let result = Executor::run(path, query)?;
-    Ok(result)
+    Ok(vec![])
 }

@@ -1,11 +1,11 @@
 use crate::errored;
 use crate::query::errors::InvalidSQL;
 use crate::query::errors::InvalidSQL::Syntax;
-use crate::query::tokenizer::TokenizerState::*;
-use crate::query::TokenKind::{
+use crate::query::structs::token::TokenKind::{
     Identifier, Keyword, Number, ParenthesisClose, ParenthesisOpen, Unknown,
 };
-use crate::query::{Token, TokenKind};
+use crate::query::structs::token::{Token, TokenKind};
+use crate::query::tokenizer::TokenizerState::*;
 
 const VALID_OPERATORS: &[&str] = &["*", "=", "<", ">", "!", ">=", "<=", "!="];
 

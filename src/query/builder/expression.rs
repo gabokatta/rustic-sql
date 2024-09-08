@@ -1,42 +1,16 @@
 use crate::errored;
-use crate::query::builder::expression::ExpressionNode::{Empty, Leaf};
-use crate::query::builder::expression::ExpressionOperator::{
-    Equals, GreaterOrEqual, GreaterThan, LessOrEqual, LessThan, NotEquals,
-};
 use crate::query::errors::InvalidSQL;
 use crate::query::errors::InvalidSQL::Syntax;
-use crate::query::TokenKind::Keyword;
-use crate::query::{Token, TokenKind};
+use crate::query::structs::expression::ExpressionNode::{Empty, Leaf};
+use crate::query::structs::expression::ExpressionOperator::{
+    Equals, GreaterOrEqual, GreaterThan, LessOrEqual, LessThan, NotEquals,
+};
+use crate::query::structs::expression::{ExpressionNode, ExpressionOperator};
+use crate::query::structs::token::TokenKind::Keyword;
+use crate::query::structs::token::{Token, TokenKind};
 use std::collections::VecDeque;
 
 pub struct ExpressionBuilder;
-
-#[derive(Debug, Default, PartialEq)]
-pub enum ExpressionOperator {
-    #[default]
-    None,
-    Equals,
-    NotEquals,
-    GreaterThan,
-    LessThan,
-    GreaterOrEqual,
-    LessOrEqual,
-    And,
-    Or,
-    Not,
-}
-
-#[derive(Default, PartialEq)]
-pub enum ExpressionNode {
-    #[default]
-    Empty,
-    Leaf(Token),
-    Statement {
-        operator: ExpressionOperator,
-        left: Box<ExpressionNode>,
-        right: Box<ExpressionNode>,
-    },
-}
 
 impl ExpressionBuilder {
     pub fn parse_expressions(tokens: &mut VecDeque<Token>) -> Result<ExpressionNode, InvalidSQL> {
@@ -85,7 +59,7 @@ impl ExpressionBuilder {
                 return Ok(ExpressionNode::Statement {
                     operator: ExpressionOperator::Not,
                     left: Box::new(node),
-                    right: Box::new(ExpressionNode::Empty),
+                    right: Box::new(Empty),
                 });
             }
         }
