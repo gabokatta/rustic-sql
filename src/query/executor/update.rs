@@ -1,5 +1,4 @@
 use crate::query::executor::Executor;
-use crate::query::structs::expression::ExpressionNode::Empty;
 use crate::query::structs::row::Row;
 use crate::utils::errors::Errored;
 use crate::utils::files::{
@@ -20,7 +19,7 @@ impl Executor {
             let fields = split_csv(&l);
             let mut row = Row::new(&header);
             row.set_new_values(fields)?;
-            if self.query.conditions == Empty || row.matches_condition(&self.query)? {
+            if row.matches_condition(&self.query)? {
                 row.update_values(&self.query.updates)?;
                 writeln!(writer, "{}", row.as_csv_string())?
             } else {

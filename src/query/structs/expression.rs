@@ -44,7 +44,7 @@ pub enum ExpressionResult {
 impl ExpressionNode {
     pub fn evaluate(&self, values: &HashMap<String, String>) -> Result<ExpressionResult, Errored> {
         match self {
-            ExpressionNode::Empty => Ok(Bool(false)),
+            ExpressionNode::Empty => Ok(Bool(true)),
             ExpressionNode::Leaf(t) => match t.kind {
                 TokenKind::Identifier => ExpressionNode::get_variable_value(values, t),
                 TokenKind::String => Ok(Str(t.value.to_string())),

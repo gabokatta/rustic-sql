@@ -32,13 +32,6 @@ impl<'a> Row<'a> {
         Ok(())
     }
 
-    pub fn clear(&mut self) -> Result<(), Errored> {
-        for key in self.header.iter() {
-            self.insert(key, "".to_string())?;
-        }
-        Ok(())
-    }
-
     pub fn update_values(&mut self, updates: &Vec<ExpressionNode>) -> Result<(), Errored> {
         for up in updates {
             if let Ok((field, value)) = up.as_leaf_tuple() {

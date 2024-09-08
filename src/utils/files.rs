@@ -65,7 +65,7 @@ pub fn delete_temp_file(table_path: &Path, temp_path: &Path) -> Result<(), Error
 }
 
 pub fn get_table_file(table_path: &Path) -> Result<File, Errored> {
-    Ok(File::open(table_path)?)
+    Ok(File::options().read(true).append(true).open(table_path)?)
 }
 
 pub fn validate_path(dir: &str) -> Result<&Path, Errored> {
