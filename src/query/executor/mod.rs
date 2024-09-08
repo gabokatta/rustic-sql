@@ -4,7 +4,6 @@ use crate::query::structs::query::Query;
 use crate::utils::errors::Errored;
 use crate::utils::errors::Errored::Syntax;
 use crate::utils::files::get_table_file;
-use std::collections::HashMap;
 
 mod delete;
 mod insert;
@@ -14,7 +13,6 @@ mod update;
 pub struct Executor {
     path: String,
     query: Query,
-    values: HashMap<String, String>,
 }
 
 impl Executor {
@@ -22,7 +20,6 @@ impl Executor {
         Executor {
             path: path.to_string(),
             query,
-            values: HashMap::new(),
         }
     }
 
