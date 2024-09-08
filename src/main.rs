@@ -9,12 +9,11 @@ use std::error::Error;
 mod query;
 mod utils;
 
-fn main() -> Result<(), Box<dyn Error>> {
+fn main() {
     let args = env::args().collect();
     if let Err(e) = run(args) {
         println!("{}", e);
     }
-    Ok(())
 }
 
 fn run(args: Vec<String>) -> Result<(), Box<dyn Error>> {

@@ -31,6 +31,18 @@ impl<'a> Row<'a> {
         }
         Ok(())
     }
+    
+    pub fn clear(&mut self) -> Result<(), Errored> {
+        for (key, _) in self.header.iter().zip(values) {
+            self.insert(key, "".to_string())?;
+        }
+        Ok(())
+    }
+
+    pub fn update_value(&mut self, key: String, value: String) -> Result<(), Errored> {
+        self.insert(&key, value)?;
+        Ok(())
+    }
 
     pub fn set_new_values(&mut self, values: Vec<String>) -> Result<(), Errored> {
         if self.header.len() != values.len() {
@@ -47,13 +59,17 @@ impl<'a> Row<'a> {
         Ok(())
     }
 
-    pub fn print_values(&self) {
+    pub fn as_csv_string(&self) -> String {
         let mut fields: Vec<&str> = Vec::new();
         for key in self.header {
             let value = self.values.get(key).map(|v| v.as_str()).unwrap_or("");
             fields.push(value);
         }
-        println!("{}", fields.join(","));
+        fields.join(",")
+    }
+
+    pub fn print_values(&self) {
+        println!("{}", self.as_csv_string());
     }
 
     pub fn matches_condition(&self, query: &Query) -> Result<bool, Errored> {

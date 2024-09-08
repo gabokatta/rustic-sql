@@ -52,7 +52,7 @@ impl ExpressionComparator {
         }
     }
 
-    pub fn cmp(
+    pub fn compare_ordering(
         this: &ExpressionResult,
         other: &ExpressionResult,
     ) -> Result<std::cmp::Ordering, Errored> {

@@ -37,10 +37,10 @@ impl Executor {
                 if let (Ok(a), Ok(b)) = (l, r) {
                     return match order.kind {
                         OrderKind::Asc => {
-                            ExpressionComparator::cmp(&a, &b).unwrap_or(Ordering::Equal)
+                            ExpressionComparator::compare_ordering(&a, &b).unwrap_or(Ordering::Equal)
                         }
                         OrderKind::Desc => {
-                            ExpressionComparator::cmp(&b, &a).unwrap_or(Ordering::Equal)
+                            ExpressionComparator::compare_ordering(&b, &a).unwrap_or(Ordering::Equal)
                         }
                     };
                 }
