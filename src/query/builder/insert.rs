@@ -1,9 +1,11 @@
+use crate::errored;
 use crate::query::builder::{unexpected_token_in_stage, validate_keywords, Builder};
 use crate::query::structs::operation::Operation::Insert;
 use crate::query::structs::query::Query;
 use crate::query::structs::token::TokenKind::{Keyword, ParenthesisClose, ParenthesisOpen};
 use crate::query::structs::token::{Token, TokenKind};
 use crate::utils::errors::Errored;
+use crate::utils::errors::Errored::Syntax;
 use std::collections::VecDeque;
 
 const ALLOWED_KEYWORDS: &[&str] = &["VALUES"];
@@ -17,9 +19,10 @@ impl InsertBuilder {
         Self { tokens }
     }
 
-    fn parse_insert_values(&mut self) -> Result<Vec<Token>, Errored> {
+    fn parse_insert_values(&mut self) -> Result<Vec<Vec<Token>>, Errored> {
         self.pop_expecting("VALUES", Keyword)?;
         self.peek_expecting("(", ParenthesisOpen)?;
+        let mut inserts = vec![];
         let mut values = vec![];
         while let Some(t) = self.tokens.front() {
             match t.kind {
@@ -33,11 +36,29 @@ impl InsertBuilder {
                 }
                 ParenthesisClose => {
                     self.tokens.pop_front();
+                    inserts.push(values);
+                    values = vec![];
                 }
                 _ => unexpected_token_in_stage("VALUES", t)?,
             }
         }
-        Ok(values)
+        Ok(inserts)
+    }
+
+    fn validate_inserts(&self, query: &Query) -> Result<(), Errored> {
+        for insert in &query.inserts {
+            let columns = query.columns.len();
+            if insert.len() != columns {
+                let values: Vec<&String> = insert.iter().map(|t| &t.value).collect();
+                errored!(
+                    Syntax,
+                    "expected {} columns but insert has:\n{:?}",
+                    columns,
+                    values
+                )
+            }
+        }
+        Ok(())
     }
 }
 
@@ -51,6 +72,7 @@ impl Builder for InsertBuilder {
         query.columns = self.parse_columns()?;
         query.inserts = self.parse_insert_values()?;
         self.expect_none()?;
+        self.validate_inserts(&query)?;
         Ok(query)
     }
 

@@ -31,9 +31,9 @@ impl<'a> Row<'a> {
         }
         Ok(())
     }
-    
+
     pub fn clear(&mut self) -> Result<(), Errored> {
-        for (key, _) in self.header.iter().zip(values) {
+        for key in self.header.iter() {
             self.insert(key, "".to_string())?;
         }
         Ok(())

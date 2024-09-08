@@ -11,7 +11,7 @@ use std::io::{BufRead, BufReader};
 
 impl Executor {
     pub fn run_select(&mut self, table: File) -> Result<(), Errored> {
-        let mut reader = BufReader::new(table);
+        let mut reader = BufReader::new(&table);
         let header = extract_header(&mut reader)?;
         println!("{}", header.join(","));
         let mut matched_rows: Vec<Row> = vec![];
@@ -36,12 +36,10 @@ impl Executor {
                 let r = ExpressionNode::get_variable_value(&b.values, &order.field);
                 if let (Ok(a), Ok(b)) = (l, r) {
                     return match order.kind {
-                        OrderKind::Asc => {
-                            ExpressionComparator::compare_ordering(&a, &b).unwrap_or(Ordering::Equal)
-                        }
-                        OrderKind::Desc => {
-                            ExpressionComparator::compare_ordering(&b, &a).unwrap_or(Ordering::Equal)
-                        }
+                        OrderKind::Asc => ExpressionComparator::compare_ordering(&a, &b)
+                            .unwrap_or(Ordering::Equal),
+                        OrderKind::Desc => ExpressionComparator::compare_ordering(&b, &a)
+                            .unwrap_or(Ordering::Equal),
                     };
                 }
                 Ordering::Equal

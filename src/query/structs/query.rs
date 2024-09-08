@@ -18,7 +18,7 @@ pub struct Query {
     pub operation: Operation,
     pub table: String,
     pub columns: Vec<Token>,
-    pub inserts: Vec<Token>,
+    pub inserts: Vec<Vec<Token>>,
     pub updates: Vec<ExpressionNode>,
     pub conditions: ExpressionNode,
     pub ordering: Vec<Ordering>,
@@ -53,11 +53,15 @@ impl Query {
 impl Display for Query {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         let fields: Vec<&str> = self.columns.iter().map(|f| f.value.as_str()).collect();
-        let inserts: Vec<&str> = self.inserts.iter().map(|f| f.value.as_str()).collect();
         writeln!(f, "Query Kind: [{:?}]", self.operation)?;
         writeln!(f, "Table: {:?}", self.table)?;
         writeln!(f, "Columns: {:?}", fields)?;
-        writeln!(f, "Inserts: {:?}", inserts)?;
+        writeln!(f, "Inserts {{ ")?;
+        for insert in &self.inserts {
+            let values: Vec<&String> = insert.iter().map(|t| &t.value).collect();
+            writeln!(f, "   {:?}", values)?;
+        }
+        writeln!(f, "}} ")?;
         writeln!(f, "Updates: {:?}", self.updates)?;
         writeln!(f, "Conditions: {:?}", self.conditions)?;
         writeln!(f, "Ordering: {:?}", self.ordering)

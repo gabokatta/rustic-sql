@@ -52,7 +52,11 @@ pub trait Builder {
                 Keyword if t.value == "FROM" || t.value == "VALUES" => {
                     break;
                 }
-                ParenthesisClose | Operator if t.value == "*" => {
+                ParenthesisClose => {
+                    self.tokens().pop_front();
+                    break;
+                }
+                Operator if t.value == "*" => {
                     self.tokens().pop_front();
                     break;
                 }

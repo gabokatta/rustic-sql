@@ -8,7 +8,7 @@ use std::path::Path;
 const CSV_EXTENSION: &str = ".csv";
 const CSV_SEPARATOR: &str = ",";
 
-pub fn extract_header(reader: &mut BufReader<File>) -> Result<Vec<String>, Errored> {
+pub fn extract_header(reader: &mut BufReader<&File>) -> Result<Vec<String>, Errored> {
     let mut header = String::new();
     reader.read_line(&mut header)?;
     Ok(split_csv(&header))
