@@ -1,10 +1,11 @@
 use crate::errored;
 use crate::utils::errors::Errored;
-use crate::utils::errors::Errored::{Default, Table};
+use crate::utils::errors::Errored::Default;
 use std::fs::File;
 use std::io::{BufRead, BufReader};
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
+const TEMP_EXTENSION: &str = ".tmp";
 const CSV_EXTENSION: &str = ".csv";
 const CSV_SEPARATOR: &str = ",";
 
@@ -32,24 +33,24 @@ pub fn validate_path(dir: &str) -> Result<&Path, Errored> {
     Ok(path)
 }
 
-pub fn get_table_file(dir_path: &str, table_name: &str) -> Result<File, Errored> {
-    let path = Path::new(dir_path);
-    let table_path = path.join(format!("{}{}", table_name, CSV_EXTENSION));
+pub fn get_table_path(dir_path: &Path, table_name: &str) -> Result<PathBuf, Errored> {
+    let table_path = dir_path.join(format!("{}{}", table_name, CSV_EXTENSION));
     if !table_path.is_file() {
         errored!(
             Default,
             "table {} does not exist in directory: {}",
             table_name,
-            dir_path
+            dir_path.display()
         );
     }
-    match File::open(table_path) {
-        Ok(f) => Ok(f),
-        Err(err) => errored!(
-            Table,
-            "could not read table {} file, cause: {}",
-            table_name,
-            err
-        ),
-    }
+    Ok(table_path)
+}
+
+pub fn get_temp_file(table_path: &Path) -> Result<File, Errored> {
+    let table_path = table_path.with_extension(TEMP_EXTENSION);
+    Ok(File::create(table_path)?)
+}
+
+pub fn get_table_file(table_path: &Path) -> Result<File, Errored> {
+    Ok(File::open(table_path)?)
 }

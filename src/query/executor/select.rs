@@ -4,13 +4,13 @@ use crate::query::structs::expression::ExpressionNode;
 use crate::query::structs::ordering::OrderKind;
 use crate::query::structs::row::Row;
 use crate::utils::errors::Errored;
-use crate::utils::files::{extract_header, split_csv};
+use crate::utils::files::{extract_header, get_table_file, split_csv};
 use std::cmp::Ordering;
-use std::fs::File;
 use std::io::{BufRead, BufReader};
 
 impl Executor {
-    pub fn run_select(&mut self, table: File) -> Result<(), Errored> {
+    pub fn run_select(&mut self) -> Result<(), Errored> {
+        let table = get_table_file(&self.table_path)?;
         let mut reader = BufReader::new(&table);
         let header = extract_header(&mut reader)?;
         println!("{}", header.join(","));
