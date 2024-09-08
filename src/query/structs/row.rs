@@ -1,6 +1,7 @@
 use crate::errored;
 use crate::query::structs::expression::{ExpressionNode, ExpressionResult};
 use crate::query::structs::query::Query;
+use crate::query::structs::token::Token;
 use crate::utils::errors::Errored;
 use crate::utils::errors::Errored::{Column, Default, Syntax, Table};
 use std::collections::HashMap;
@@ -32,7 +33,14 @@ impl<'a> Row<'a> {
         Ok(())
     }
 
-    pub fn update_values(&mut self, updates: &Vec<ExpressionNode>) -> Result<(), Errored> {
+    pub fn clear(&mut self) -> Result<(), Errored> {
+        for key in self.header {
+            self.insert(key, "".to_string())?
+        }
+        Ok(())
+    }
+
+    pub fn apply_updates(&mut self, updates: &Vec<ExpressionNode>) -> Result<(), Errored> {
         for up in updates {
             if let Ok((field, value)) = up.as_leaf_tuple() {
                 let k = &field.value;
@@ -45,7 +53,7 @@ impl<'a> Row<'a> {
         Ok(())
     }
 
-    pub fn set_new_values(&mut self, values: Vec<String>) -> Result<(), Errored> {
+    pub fn read_new_values(&mut self, values: Vec<String>) -> Result<(), Errored> {
         if self.header.len() != values.len() {
             errored!(
                 Table,
@@ -56,6 +64,13 @@ impl<'a> Row<'a> {
         }
         for (key, value) in self.header.iter().zip(values) {
             self.insert(key, value)?;
+        }
+        Ok(())
+    }
+
+    pub fn insert_values(&mut self, columns: &[Token], values: Vec<String>) -> Result<(), Errored> {
+        for (col, value) in columns.iter().zip(values) {
+            self.insert(&col.value, value)?
         }
         Ok(())
     }

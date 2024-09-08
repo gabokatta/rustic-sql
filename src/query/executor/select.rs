@@ -19,7 +19,7 @@ impl Executor {
             let l = line?;
             let fields = split_csv(&l);
             let mut row = Row::new(&header);
-            row.set_new_values(fields)?;
+            row.read_new_values(fields)?;
             if row.matches_condition(&self.query)? {
                 matched_rows.push(row)
             }

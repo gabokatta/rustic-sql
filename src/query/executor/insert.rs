@@ -12,7 +12,8 @@ impl Executor {
         for insert in &self.query.inserts {
             let fields: Vec<String> = insert.iter().map(|t| t.value.to_string()).collect();
             let mut row = Row::new(&header);
-            row.set_new_values(fields)?;
+            row.clear()?;
+            row.insert_values(&self.query.columns, fields)?;
             writeln!(table, "{}", row.as_csv_string())?
         }
         Ok(())
