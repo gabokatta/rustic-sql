@@ -98,8 +98,7 @@ impl Executor {
         let mut values = vec![];
         if self.query.columns.is_empty() {
             println!("{}", header.join(","));
-        }
-        else {
+        } else {
             values = self
                 .query
                 .columns

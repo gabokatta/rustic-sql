@@ -22,7 +22,7 @@ fn test_select_no_where() {
 fn test_select_where_with_order_by() {
     let test = RusticSQLTest::default();
     let query = "SELECT name, email FROM users WHERE age > 30 ORDER BY age DESC";
-    
+
     let expected_rows: Vec<String> = [
         vec!["Bob Brown", "bob.brown@example.com"],
         vec!["Frank Miller", "frank.miller@example.com"],
@@ -36,7 +36,7 @@ fn test_select_where_with_order_by() {
     .collect();
     let expected_header: String = ["name", "email"].join(",");
     let result = test.run_and_get_rows(query.to_string());
-    
+
     assert_eq!(expected_header, result[0]);
     assert_eq!(expected_rows, result[1..]);
 }
