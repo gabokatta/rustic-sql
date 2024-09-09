@@ -39,7 +39,7 @@ jobs:
         run: cargo doc --no-deps
 
       - name: Add redirect
-        run: echo '<meta http-equiv="refresh" content="0;url=rustic-sql/rustic-sql/target/doc/rustic_sql/index.htmlrustic-sql/index.html">' > target/doc/index.html
+        run: echo '<meta http-equiv="refresh" content="0;url=rustic-sql/index.html">' > target/doc/index.html
 
       - name: Remove lock file
         run: rm target/doc/.lock
