@@ -21,7 +21,7 @@ impl Executor {
             row.read_new_row(fields)?;
             if row.matches_condition(&self.query)? {
                 row.apply_updates(&self.query.updates)?;
-                writeln!(writer, "{}", row.as_csv_string())?
+                writeln!(writer, "{}", row.as_csv_row())?
             } else {
                 writeln!(writer, "{}", l)?
             }

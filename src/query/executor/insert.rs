@@ -14,7 +14,7 @@ impl Executor {
             let mut row = Row::new(&header);
             row.clear()?;
             row.insert_values(&self.query.columns, fields)?;
-            writeln!(table, "{}", row.as_csv_string())?
+            writeln!(table, "{}", row.as_csv_row())?
         }
         Ok(())
     }

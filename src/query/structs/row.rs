@@ -75,17 +75,26 @@ impl<'a> Row<'a> {
         Ok(())
     }
 
-    pub fn as_csv_string(&self) -> String {
-        let mut fields: Vec<&str> = Vec::new();
-        for key in self.header {
+    fn as_csv_projection(&self, fields: &Vec<String>) -> String {
+        let mut projection: Vec<&str> = Vec::new();
+        for key in fields {
             let value = self.values.get(key).map(|v| v.as_str()).unwrap_or("");
-            fields.push(value);
+            projection.push(value);
         }
-        fields.join(",")
+        projection.join(",")
     }
 
-    pub fn print_values(&self) {
-        println!("{}", self.as_csv_string());
+    pub fn as_csv_row(&self) -> String {
+        self.as_csv_projection(self.header)
+    }
+
+    pub fn print_projection(&self, columns: &[Token]) {
+        if columns.is_empty() {
+            println!("{}", self.as_csv_row());
+        } else {
+            let values: Vec<String> = columns.iter().map(|t| t.value.to_string()).collect();
+            println!("{}", self.as_csv_projection(&values));
+        }
     }
 
     pub fn matches_condition(&self, query: &Query) -> Result<bool, Errored> {
@@ -102,6 +111,7 @@ mod tests {
     use crate::query::structs::expression::{ExpressionNode, ExpressionOperator};
     use crate::query::structs::token::Token;
     use crate::query::structs::token::TokenKind::*;
+    use std::default::Default;
 
     #[test]
     fn test_initializing() {
@@ -206,7 +216,7 @@ mod tests {
         row.set("id", "360".to_string()).unwrap();
         row.set("apellido", "katta".to_string()).unwrap();
 
-        let csv_string = row.as_csv_string();
+        let csv_string = row.as_csv_row();
         assert_eq!(csv_string, "360,katta");
     }
 
