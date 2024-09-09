@@ -47,6 +47,9 @@ jobs:
       - name: Check Dir 2
         run: ls ./target
 
+      - name: Check Dir 3
+        run: ls ./target/doc
+
       - name: Remove lock file
         run: rm target/doc/.lock
 
