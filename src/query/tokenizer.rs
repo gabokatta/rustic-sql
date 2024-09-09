@@ -28,13 +28,16 @@ const RESERVED_KEYWORDS: &[&str] = &[
     "NOT",
 ];
 
+#[derive(Default)]
 pub struct Tokenizer {
     i: usize,
     state: TokenizerState,
     parenthesis_count: i8,
 }
 
+#[derive(Default)]
 enum TokenizerState {
+    #[default]
     Begin,
     IdentifierOrKeyword,
     Operator,

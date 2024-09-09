@@ -25,18 +25,6 @@ pub struct Query {
 }
 
 impl Query {
-    pub fn default() -> Self {
-        Self {
-            operation: Unknown,
-            table: "".to_string(),
-            columns: vec![],
-            inserts: vec![],
-            updates: vec![],
-            conditions: ExpressionNode::default(),
-            ordering: vec![],
-        }
-    }
-
     pub fn from(tokens: Vec<Token>) -> Result<Self, Errored> {
         let mut tokens = VecDeque::from(tokens);
         let kind = get_kind(tokens.pop_front());
@@ -46,6 +34,20 @@ impl Query {
             Update => UpdateBuilder::new(tokens).build(),
             Delete => DeleteBuilder::new(tokens).build(),
             Insert => InsertBuilder::new(tokens).build(),
+        }
+    }
+}
+
+impl Default for Query {
+    fn default() -> Self {
+        Self {
+            operation: Unknown,
+            table: "".to_string(),
+            columns: vec![],
+            inserts: vec![],
+            updates: vec![],
+            conditions: ExpressionNode::default(),
+            ordering: vec![],
         }
     }
 }

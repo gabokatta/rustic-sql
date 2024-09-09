@@ -27,8 +27,10 @@ impl SelectBuilder {
             if t.kind != Identifier {
                 unexpected_token_in_stage("ORDER_BY", &t)?
             }
-            let mut new_order = Ordering::default();
-            new_order.field = t;
+            let mut new_order = Ordering {
+                field: t,
+                ..Ordering::default()
+            };
             if let Some(next) = self.tokens.front() {
                 match next.kind {
                     Keyword if next.value == "ASC" || next.value == "DESC" => {

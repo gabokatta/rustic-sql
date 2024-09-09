@@ -1,0 +1,11 @@
+order_id,customer_name,product_name,quantity,price_per_unit
+1001,John Doe,Laptop,1,999
+1002,Jane Smith,Smartphone,2,499
+1003,Alice Johnson,Headphones,3,149
+1004,Bob Brown,Keyboard,1,89
+1005,Charlie Davis,Mouse,2,29
+1006,David Wilson,Monitor,1,279
+1007,Eve Adams,Desk Chair,1,159
+1008,Frank Miller,Webcam,1,89
+1009,Grace Lee,USB Drive,5,15
+1010,Henry Clark,External Hard Drive,1,119

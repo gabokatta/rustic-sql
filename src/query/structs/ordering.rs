@@ -14,8 +14,8 @@ pub enum OrderKind {
     Desc,
 }
 
-impl Ordering {
-    pub fn default() -> Self {
+impl Default for Ordering {
+    fn default() -> Self {
         Self {
             field: Token::default(),
             kind: Asc,

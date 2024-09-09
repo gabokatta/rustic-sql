@@ -18,8 +18,8 @@ pub enum TokenKind {
     Keyword,
 }
 
-impl Token {
-    pub fn default() -> Self {
+impl Default for Token {
+    fn default() -> Self {
         Self {
             value: String::new(),
             kind: Unknown,
