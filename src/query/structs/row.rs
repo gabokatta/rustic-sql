@@ -258,14 +258,13 @@ impl<'a> Row<'a> {
     /// let mut row = Row::new(&header);
     /// row.set("id", "360".to_string()).unwrap();
     /// row.set("apellido", "katta".to_string()).unwrap();
-    /// row.print_projection(&vec![Token { kind: Identifier, value: "id".to_string() }]);
+    /// row.print_projection(&vec!["id".to_string()]);
     /// ```
-    pub fn print_projection(&self, columns: &[Token]) {
+    pub fn print_projection(&self, columns: &Vec<String>) {
         if columns.is_empty() {
             println!("{}", self.as_csv_row());
         } else {
-            let values: Vec<String> = columns.iter().map(|t| t.value.to_string()).collect();
-            println!("{}", self.as_csv_projection(&values));
+            println!("{}", self.as_csv_projection(columns));
         }
     }
 
