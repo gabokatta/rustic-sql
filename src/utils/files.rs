@@ -170,7 +170,7 @@ pub fn make_file_end_in_newline(file: &mut File) -> Result<(), Errored> {
     file.seek(SeekFrom::End(-1))?;
     file.read_exact(&mut last_byte)?;
     if last_byte[0] != b'\n' {
-        file.write_all(&[b'\n'])?;
+        file.write_all(b"\n")?;
     }
     Ok(())
 }
