@@ -18,7 +18,8 @@ ___
 >```
 ___
 > [!NOTE]
-> Leer la [documentación](https://gabokatta.github.io/rustic-sql/index.html)
+> ¿Como levantar la documentación?
 >```BASH
 >cargo doc --open
 >```
+> Alternativamente se puede visualizar por [github!](https://gabokatta.github.io/rustic-sql)
