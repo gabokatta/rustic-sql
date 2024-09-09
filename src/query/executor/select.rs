@@ -53,6 +53,9 @@ impl Executor {
     /// especificados en `self.query.ordering`. Verifica si los campos de ordenamiento existen en el encabezado
     /// de la tabla y realiza la comparación correspondiente.
     ///
+    /// Si hay varios ordenamientos en la consulta, primero se evalua uno y si el resultado es igual,
+    /// se compara por el siguiente.
+    ///
     /// # Errores
     ///
     /// Retorna un error si alguno de los campos de ordenamiento no existe en el encabezado.
@@ -69,20 +72,25 @@ impl Executor {
                     &order.field.value
                 )
             }
-            matched_rows.sort_by(|a, b| {
+        }
+        matched_rows.sort_by(|a, b| {
+            for order in &self.query.ordering {
                 let l = ExpressionNode::get_variable_value(&a.values, &order.field);
                 let r = ExpressionNode::get_variable_value(&b.values, &order.field);
                 if let (Ok(a), Ok(b)) = (l, r) {
-                    return match order.kind {
+                    let comparison_result = match order.kind {
                         OrderKind::Asc => ExpressionComparator::compare_ordering(&a, &b)
                             .unwrap_or(Ordering::Equal),
                         OrderKind::Desc => ExpressionComparator::compare_ordering(&b, &a)
                             .unwrap_or(Ordering::Equal),
                     };
+                    if comparison_result != Ordering::Equal {
+                        return comparison_result;
+                    }
                 }
-                Ordering::Equal
-            })
-        }
+            }
+            Ordering::Equal
+        });
         Ok(())
     }
 
