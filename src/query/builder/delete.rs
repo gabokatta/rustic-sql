@@ -55,13 +55,6 @@ mod tests {
         tokenizer.tokenize(sql).unwrap()
     }
 
-    fn to_token(value: &str, kind: TokenKind) -> Token {
-        Token {
-            value: value.to_string(),
-            kind,
-        }
-    }
-
     #[test]
     fn test_delete_simple() {
         let sql = "DELETE FROM ordenes";
