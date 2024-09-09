@@ -47,7 +47,7 @@ mod tests {
     use crate::query::structs::expression::ExpressionNode::Empty;
     use crate::query::structs::operation::Operation::Delete;
     use crate::query::structs::query::Query;
-    use crate::query::structs::token::{Token, TokenKind};
+    use crate::query::structs::token::Token;
     use crate::query::tokenizer::Tokenizer;
 
     fn tokenize(sql: &str) -> Vec<Token> {
