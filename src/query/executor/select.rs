@@ -43,7 +43,7 @@ impl Executor {
             }
         }
         self.sort_rows(&mut matched_rows, &header)?;
-        self.output_rows(&header, &matched_rows);
+        self.output_projection(&header, &matched_rows);
         Ok(())
     }
 
@@ -98,7 +98,7 @@ impl Executor {
     /// # Ejemplo
     ///
     /// Este método es llamado internamente por `run_select`, por lo que no tiene un ejemplo de uso independiente.
-    fn output_rows(&self, header: &[String], matched_rows: &[Row]) {
+    fn output_projection(&self, header: &[String], matched_rows: &[Row]) {
         let mut columns = vec![];
         if self.query.columns.is_empty() {
             println!("{}", header.join(","));
