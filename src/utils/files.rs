@@ -12,18 +12,56 @@ const TEMP_EXTENSION: &str = "tmp";
 const CSV_EXTENSION: &str = "csv";
 const CSV_SEPARATOR: &str = ",";
 
+/// Extrae el encabezado de un archivo CSV.
+///
+/// # Parámetros
+///
+/// - `reader`: Un `BufReader` que envuelve un `File` desde el cual leer el encabezado.
+///
+/// # Retorna
+///
+/// Devuelve un `Result` que contiene un `Vec<String>` con los nombres de las columnas si tiene éxito, o un `Errored` en caso de error.
 pub fn extract_header(reader: &mut BufReader<&File>) -> Result<Vec<String>, Errored> {
     let mut header = String::new();
     reader.read_line(&mut header)?;
     Ok(split_csv(&header))
 }
 
+/// Divide una línea CSV en un vector de strings.
+///
+/// # Parámetros
+///
+/// - `line`: La línea CSV que se desea dividir.
+///
+/// # Retorna
+///
+/// Devuelve un `Vec<String>` con los valores separados.
+///
+/// # Ejemplo
+///
+/// ```rust
+/// use rustic_sql::utils::files::split_csv;
+/// let line = "id, id_cliente ,      email ";
+/// let result = split_csv(line);
+/// println!("{:?}", result); // Imprime ["id", "id_cliente", "email"]
+/// ```
 pub fn split_csv(line: &str) -> Vec<String> {
     line.split(CSV_SEPARATOR)
         .map(|s| s.trim().to_string())
         .collect::<Vec<String>>()
 }
 
+/// Obtiene la ruta completa del archivo CSV para una tabla dada.
+///
+/// # Parámetros
+///
+/// - `dir_path`: El directorio donde buscar.
+/// - `table_name`: El nombre de la tabla.
+///
+/// # Retorna
+///
+/// Devuelve un `Result` que contiene un `PathBuf` con la ruta al archivo de la tabla si tiene éxito, o un `Errored` en caso de error.
+/// ```
 pub fn get_table_path(dir_path: &Path, table_name: &str) -> Result<PathBuf, Errored> {
     let table_path = dir_path.join(table_name).with_extension(CSV_EXTENSION);
     if !table_path.is_file() {
@@ -37,6 +75,19 @@ pub fn get_table_path(dir_path: &Path, table_name: &str) -> Result<PathBuf, Erro
     Ok(table_path)
 }
 
+/// Genera un identificador único para un archivo temporal.
+///
+/// # Retorna
+///
+/// Devuelve un `u64` que representa el identificador único.
+///
+/// # Ejemplo
+///
+/// ```rust
+/// use rustic_sql::utils::files::get_temp_id;
+/// let id = get_temp_id();
+/// println!("{}", id);
+/// ```
 pub fn get_temp_id() -> u64 {
     let id = thread::current().id();
     let mut hasher = DefaultHasher::new();
@@ -44,6 +95,16 @@ pub fn get_temp_id() -> u64 {
     hasher.finish()
 }
 
+/// Crea un archivo temporal para una tabla dada.
+///
+/// # Parámetros
+///
+/// - `table_name`: El nombre de la tabla.
+/// - `table_path`: La ruta del directorio en donde debe estar contenida la tabla.
+///
+/// # Retorna
+///
+/// Devuelve un `Result` que contiene una tupla con un `File` y un `PathBuf` con la ruta al archivo temporal, o un `Errored` en caso de error.
 pub fn get_temp_file(table_name: &str, table_path: &Path) -> Result<(File, PathBuf), Errored> {
     let id = get_temp_id();
     let table_path = table_path
@@ -60,6 +121,27 @@ pub fn get_temp_file(table_name: &str, table_path: &Path) -> Result<(File, PathB
     ))
 }
 
+/// Elimina un archivo temporal, renombrándolo a la ruta de la tabla.
+///
+/// # Parámetros
+///
+/// - `table_path`: La ruta al archivo de la tabla.
+/// - `temp_path`: La ruta al archivo temporal.
+///
+/// # Retorna
+///
+/// Devuelve un `Result` que indica si la operación tuvo éxito o un `Errored` en caso de error.
+///
+/// # Ejemplo
+///
+/// ```rust
+/// use std::path::Path;
+/// use rustic_sql::utils::files::delete_temp_file;
+///
+/// let table_path = Path::new("tests/unit_tables/clientes.csv");
+/// let temp_path = Path::new("tests/unit_tables/clientes.csv.tmp");
+/// //delete_temp_file(table_path, temp_path)?;
+/// ```
 pub fn delete_temp_file(table_path: &Path, temp_path: &Path) -> Result<(), Errored> {
     if let Some(ex) = temp_path.extension() {
         if ex.to_string_lossy() != TEMP_EXTENSION {
@@ -70,6 +152,16 @@ pub fn delete_temp_file(table_path: &Path, temp_path: &Path) -> Result<(), Error
     Ok(())
 }
 
+/// Asegura que un archivo termine en una nueva línea.
+///
+/// # Parámetros
+///
+/// - `file`: El archivo que se desea verificar.
+///
+/// # Retorna
+///
+/// Devuelve un `Result` que indica si la operación tuvo éxito o un `Errored` en caso de error.
+///
 pub fn make_file_end_in_newline(file: &mut File) -> Result<(), Errored> {
     file.seek(SeekFrom::End(0))?;
     if file.metadata()?.len() == 0 {
@@ -84,10 +176,30 @@ pub fn make_file_end_in_newline(file: &mut File) -> Result<(), Errored> {
     Ok(())
 }
 
+/// Obtiene un archivo en modo lectura y adición.
+///
+/// # Parámetros
+///
+/// - `table_path`: La ruta al archivo de la tabla.
+///
+/// # Retorna
+///
+/// Devuelve un `Result` que contiene un `File` en modo lectura y adición, o un `Errored` en caso de error.
+///
 pub fn get_table_file(table_path: &Path) -> Result<File, Errored> {
     Ok(File::options().read(true).append(true).open(table_path)?)
 }
 
+/// Valida si una ruta es un directorio existente y no vacío.
+///
+/// # Parámetros
+///
+/// - `dir`: La ruta al directorio.
+///
+/// # Retorna
+///
+/// Devuelve un `Result` que contiene un `&Path` si la validación es exitosa, o un `Errored` en caso de error.
+///
 pub fn validate_path(dir: &str) -> Result<&Path, Errored> {
     let path = Path::new(dir);
     if !path.exists() {

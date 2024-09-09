@@ -4,9 +4,21 @@ use crate::query::structs::expression::{ExpressionOperator, ExpressionResult};
 use crate::utils::errors::Errored;
 use crate::utils::errors::Errored::Syntax;
 
+/// Comparador de expresiones que permite comparar diferentes tipos de datos.
+/// Es utilizado principalmente con los valores "hoja" de las expresiones SQL.
 pub struct ExpressionComparator;
 
 impl ExpressionComparator {
+    /// Compara dos enteros utilizando el operador especificado.
+    ///
+    /// # Parámetros
+    /// - `l`: El primer entero a comparar.
+    /// - `r`: El segundo entero a comparar.
+    /// - `op`: El operador de comparación a utilizar.
+    ///
+    /// # Retorno
+    /// Retorna un `Result` que contiene un `ExpressionResult` con el resultado de la comparación,
+    /// o un error `Errored` si el operador no es válido para enteros.
     pub fn compare_ints(
         l: i64,
         r: i64,
@@ -23,6 +35,16 @@ impl ExpressionComparator {
         }
     }
 
+    /// Compara dos cadenas de texto utilizando el operador especificado.
+    ///
+    /// # Parámetros
+    /// - `l`: La primera cadena de texto a comparar.
+    /// - `r`: La segunda cadena de texto a comparar.
+    /// - `op`: El operador de comparación a utilizar.
+    ///
+    /// # Retorno
+    /// Retorna un `Result` que contiene un `ExpressionResult` con el resultado de la comparación,
+    /// o un error `Errored` si el operador no es válido para cadenas de texto.
     pub fn compare_str(
         l: &str,
         r: &str,
@@ -39,6 +61,16 @@ impl ExpressionComparator {
         }
     }
 
+    /// Compara dos valores booleanos utilizando el operador especificado.
+    ///
+    /// # Parámetros
+    /// - `l`: El primer valor booleano a comparar.
+    /// - `r`: El segundo valor booleano a comparar.
+    /// - `op`: El operador de comparación a utilizar.
+    ///
+    /// # Retorno
+    /// Retorna un `Result` que contiene un `ExpressionResult` con el resultado de la comparación,
+    /// o un error `Errored` si el operador no es válido para valores booleanos.
     pub fn compare_bools(
         l: bool,
         r: bool,
@@ -52,6 +84,15 @@ impl ExpressionComparator {
         }
     }
 
+    /// Compara dos resultados de expresiones para determinar su orden relativo.
+    ///
+    /// # Parámetros
+    /// - `this`: El primer resultado de expresión a comparar.
+    /// - `other`: El segundo resultado de expresión a comparar.
+    ///
+    /// # Retorno
+    /// Retorna un `Result` que contiene un valor `std::cmp::Ordering` que indica el orden relativo
+    /// de los dos resultados, o un error `Errored` si los tipos de los resultados no son comparables.
     pub fn compare_ordering(
         this: &ExpressionResult,
         other: &ExpressionResult,

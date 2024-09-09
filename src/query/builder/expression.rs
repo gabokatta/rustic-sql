@@ -8,13 +8,67 @@ use crate::utils::errors::Errored;
 use crate::utils::errors::Errored::Syntax;
 use std::collections::VecDeque;
 
+/// Estructura para analizar y construir expresiones lógicas en una consulta.
+///
+/// `ExpressionBuilder` proporciona métodos recursivos para analizar expresiones condicionales
+/// como `AND`, `OR`, `NOT`, y comparaciones simples. Estas expresiones son comúnmente
+/// utilizadas en las cláusulas `WHERE` de las consultas SQL.
 pub struct ExpressionBuilder;
 
 impl ExpressionBuilder {
+    /// Inicia el análisis de las expresiones a partir de una lista de tokens.
+    ///
+    /// Este método comienza el proceso de parseo llamando a `parse_or` para
+    /// manejar operaciones lógicas.
+    ///
+    /// La razón por la cual este método arranca parseando las operaciones OR, es porque
+    /// es la que tiene menor precedencia, de esta manera la expresión sera parseada en el siguiente orden de
+    /// predecencia:
+    ///
+    /// - OR -> AND -> NOT -> (Parantesis)
+    ///
+    /// Teniendo prioridad los operadores que estan más la derecha.
+    ///
+    /// Podemos hacer esto gracias a la naturaleza recursiva de los métodos que siempre buscaran llegar
+    /// a una hoja desde arriba e ir evaluando en reversa hasta retornar.
+    ///
+    /// # Parámetros
+    ///
+    /// - `tokens`: Cola de tokens (`VecDeque<Token>`) que representan la consulta a analizar.
+    ///
+    /// # Retorno
+    ///
+    /// Retorna un nodo de expresión (`ExpressionNode`) que representa la expresión completa.
+    ///
+    /// # Errores
+    ///
+    /// Retorna un error `Errored` si ocurre algún problema durante el análisis.
     pub fn parse_expressions(tokens: &mut VecDeque<Token>) -> Result<ExpressionNode, Errored> {
         ExpressionBuilder::parse_or(tokens)
     }
 
+    /// Analiza las expresiones con el operador `OR`.
+    ///
+    /// Este método evalúa si existen múltiples expresiones unidas por el operador `OR`
+    /// y las agrupa en un nodo de expresión.
+    ///
+    /// Primero el método busca mediante el parseo de una operacion AND el valor de la rama
+    /// izquierda de la expresión actual.
+    ///
+    /// Si el tóken actual es un operador "OR", consumimos el token y buscamos el valor
+    /// de la derecha.
+    ///
+    /// # Parámetros
+    ///
+    /// - `tokens`: Cola de tokens a analizar.
+    ///
+    /// # Retorno
+    ///
+    /// Retorna un nodo de expresión con operadores `OR`.
+    ///
+    /// # Errores
+    ///
+    /// Retorna un error si hay un problema con los tokens.
     fn parse_or(tokens: &mut VecDeque<Token>) -> Result<ExpressionNode, Errored> {
         let mut left = ExpressionBuilder::parse_and(tokens)?;
         while let Some(t) = tokens.front() {
@@ -32,6 +86,22 @@ impl ExpressionBuilder {
         Ok(left)
     }
 
+    /// Analiza las expresiones con el operador `AND`.
+    ///
+    /// Similar a `parse_or`, pero para operaciones con `AND`.
+    /// Podemos ver como este método le delega a los operadores `NOT` la responsabilidad de evaluar.
+    ///
+    /// # Parámetros
+    ///
+    /// - `tokens`: Cola de tokens a analizar.
+    ///
+    /// # Retorno
+    ///
+    /// Retorna un nodo de expresión con operadores `AND`.
+    ///
+    /// # Errores
+    ///
+    /// Retorna un error si hay un problema con los tokens.
     fn parse_and(tokens: &mut VecDeque<Token>) -> Result<ExpressionNode, Errored> {
         let mut left = ExpressionBuilder::parse_not(tokens)?;
         while let Some(t) = tokens.front() {
@@ -49,6 +119,25 @@ impl ExpressionBuilder {
         Ok(left)
     }
 
+    /// Analiza las expresiones con el operador `NOT`.
+    ///
+    /// Maneja expresiones que comienzan con `NOT`, invirtiendo la lógica de la condición.
+    ///
+    /// Es el operador booleano con mayor precedencia, en caso de no estar dentro de una operación
+    /// NOT, este método se encarga de empezar a estudiar los nodos más simples ya que ninguno ha matcheado hasta
+    /// ahora.
+    ///
+    /// # Parámetros
+    ///
+    /// - `tokens`: Cola de tokens a analizar.
+    ///
+    /// # Retorno
+    ///
+    /// Retorna un nodo de expresión con el operador `NOT`.
+    ///
+    /// # Errores
+    ///
+    /// Retorna un error si hay un problema con los tokens.
     fn parse_not(tokens: &mut VecDeque<Token>) -> Result<ExpressionNode, Errored> {
         if let Some(t) = tokens.front() {
             if t.kind == Keyword && t.value == "NOT" {
@@ -64,6 +153,21 @@ impl ExpressionBuilder {
         ExpressionBuilder::parse_comparisons(tokens)
     }
 
+    /// Analiza las comparaciones simples en las expresiones.
+    ///
+    /// Este método procesa las comparaciones entre dos valores usando operadores como `=`, `>`, `<`, etc.
+    ///
+    /// # Parámetros
+    ///
+    /// - `tokens`: Cola de tokens a analizar.
+    ///
+    /// # Retorno
+    ///
+    /// Retorna un nodo de expresión que representa una comparación.
+    ///
+    /// # Errores
+    ///
+    /// Retorna un error si los tokens no forman una comparación válida.
     fn parse_comparisons(tokens: &mut VecDeque<Token>) -> Result<ExpressionNode, Errored> {
         let left = ExpressionBuilder::parse_leaf(tokens)?;
         let operator = ExpressionBuilder::parse_simple_operator(tokens);
@@ -78,6 +182,24 @@ impl ExpressionBuilder {
         })
     }
 
+    /// Analiza las hojas de una expresión, como identificadores, números o cadenas.
+    ///
+    /// Este método maneja elementos básicos que no son operadores lógicos, como los valores literales.
+    ///
+    /// En caso de conseguir un parentesis, es indicador de que una nueva expresión se debe evaluar.
+    /// Es acá cuando la recursividad vuelve a empezar.
+    ///
+    /// # Parámetros
+    ///
+    /// - `tokens`: Cola de tokens a analizar.
+    ///
+    /// # Retorno
+    ///
+    /// Retorna un nodo de expresión que representa una hoja.
+    ///
+    /// # Errores
+    ///
+    /// Retorna un error si no se encuentra una hoja válida.
     fn parse_leaf(tokens: &mut VecDeque<Token>) -> Result<ExpressionNode, Errored> {
         let mut leaf = Empty;
         while let Some(t) = tokens.front() {
@@ -102,6 +224,21 @@ impl ExpressionBuilder {
         Ok(leaf)
     }
 
+    /// Analiza los operadores simples en las comparaciones.
+    ///
+    /// Este método reconoce operadores como `=`, `!=`, `>`, `<`, etc.
+    ///
+    /// # Parámetros
+    ///
+    /// - `tokens`: Cola de tokens a analizar.
+    ///
+    /// # Retorno
+    ///
+    /// Retorna el operador de la comparación (`ExpressionOperator`).
+    ///
+    /// # Errores
+    ///
+    /// Retorna un error si no se encuentra un operador válido.
     fn parse_simple_operator(tokens: &mut VecDeque<Token>) -> Result<ExpressionOperator, Errored> {
         let t = tokens
             .front()

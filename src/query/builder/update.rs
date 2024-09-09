@@ -12,15 +12,35 @@ use std::collections::VecDeque;
 
 const ALLOWED_KEYWORDS: &[&str] = &["SET", "WHERE", "AND", "OR"];
 
+/// Esta estructura procesa los tokens de una consulta SQL y permite construir una consulta
+/// UPDATE con los valores a actualizar y las condiciones asociadas.
 pub struct UpdateBuilder {
     tokens: VecDeque<Token>,
 }
 
 impl UpdateBuilder {
+    /// Crea una nueva instancia de `UpdateBuilder` con los tokens proporcionados.
+    ///
+    /// # Parámetros
+    /// - `tokens`: Un `VecDeque<Token>` que contiene los tokens de la consulta.
+    ///
+    /// # Retorna
+    /// - Una instancia de `UpdateBuilder`.
     pub fn new(tokens: VecDeque<Token>) -> Self {
         Self { tokens }
     }
 
+    /// Analiza y extrae las expresiones de actualización de una consulta SQL UPDATE.
+    ///
+    /// Este método espera encontrar la palabra clave `SET` seguida de las expresiones que representan
+    /// las columnas y valores que se van a actualizar.
+    ///
+    /// # Retorna
+    /// - Un `Result` que contiene un vector de `ExpressionNode` representando las expresiones de actualización.
+    ///
+    /// # Errores
+    /// - Retorna un error si no se encuentra la palabra clave `SET` o si las expresiones de actualización
+    ///   no están correctamente formadas.
     fn parse_updates(&mut self) -> Result<Vec<ExpressionNode>, Errored> {
         self.pop_expecting("SET", Keyword)?;
         let mut updates = vec![];
@@ -44,6 +64,17 @@ impl UpdateBuilder {
 }
 
 impl Builder for UpdateBuilder {
+    /// Construye una consulta de tipo UPDATE a partir de los tokens.
+    ///
+    /// Este método analiza los tokens, identifica la tabla, las columnas y valores a actualizar,
+    /// y las condiciones de la consulta.
+    ///
+    /// # Retorna
+    /// - Un `Result` que contiene la consulta `Query` si se construye exitosamente.
+    ///
+    /// # Errores
+    /// - Retorna un error si la consulta no está correctamente formada o contiene palabras clave
+    ///   inválidas.
     fn build(&mut self) -> Result<Query, Errored> {
         let mut query = Query::default();
         self.validate_keywords()?;
@@ -59,10 +90,24 @@ impl Builder for UpdateBuilder {
         Ok(query)
     }
 
+    /// Retorna una referencia mutable a los tokens que se están procesando.
+    ///
+    /// # Retorna
+    /// - Una referencia mutable a `VecDeque<Token>`.
     fn tokens(&mut self) -> &mut VecDeque<Token> {
         &mut self.tokens
     }
 
+    /// Valida que las palabras clave usadas en la consulta sean válidas para una consulta UPDATE.
+    ///
+    /// Este método compara las palabras clave en los tokens con las permitidas para asegurarse
+    /// de que la consulta sea válida.
+    ///
+    /// # Retorna
+    /// - `Ok(())` si las palabras clave son válidas.
+    ///
+    /// # Errores
+    /// - Retorna un error si se detecta una palabra clave inválida en la consulta.
     fn validate_keywords(&self) -> Result<(), Errored> {
         validate_keywords(ALLOWED_KEYWORDS, &self.tokens, Update)
     }

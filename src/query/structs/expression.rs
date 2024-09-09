@@ -7,6 +7,10 @@ use crate::utils::errors::Errored::{Column, Default, Syntax};
 use std::collections::HashMap;
 use std::fmt::{Debug, Formatter};
 
+/// Enum que representa a una expresión.
+///
+/// Usando una estructura recursiva de nodos, el mismo puede ser un nodo vacío, una hoja
+/// con un token, o una declaración con un operador y dos sub-nodos (izquierdo y derecho).
 #[derive(Default, PartialEq)]
 pub enum ExpressionNode {
     #[default]
@@ -19,6 +23,10 @@ pub enum ExpressionNode {
     },
 }
 
+/// Enum que define los operadores posibles en una expresión.
+///
+/// Los operadores incluyen comparación (igual, mayor.. etc.) y operadores
+/// lógicos (AND, OR, NOT).
 #[derive(Debug, Default, PartialEq)]
 pub enum ExpressionOperator {
     #[default]
@@ -34,6 +42,9 @@ pub enum ExpressionOperator {
     Not,
 }
 
+/// Enum que representa los posibles resultados de una expresión.
+///
+/// Los resultados pueden ser un entero, un string  o un valor booleano.
 #[derive(Debug, PartialEq)]
 pub enum ExpressionResult {
     Int(i64),
@@ -42,6 +53,18 @@ pub enum ExpressionResult {
 }
 
 impl ExpressionNode {
+    /// Evalúa el nodo de expresión usando los valores proporcionados.
+    /// Dichos valores estan contenidos dentro de un mapa que representa el contexto actual
+    /// de la ejecución.
+    ///
+    /// # Parámetros
+    ///
+    /// * `values` - Un `HashMap` que contiene los pares clave, valor del contexto actual.
+    ///
+    /// # Retorna
+    ///
+    /// Un `Result` que contiene el resultado de la evaluación de la expresión o un error en caso de
+    /// que ocurra algún problema.
     pub fn evaluate(&self, values: &HashMap<String, String>) -> Result<ExpressionResult, Errored> {
         match self {
             ExpressionNode::Empty => Ok(Bool(true)),
@@ -63,6 +86,20 @@ impl ExpressionNode {
         }
     }
 
+    /// Obtiene el valor de una declaración comparativa.
+    /// El método comparativo a ser ejecutado depende de los tipos de datos contenidos
+    /// en las hojas de la expresión.
+    ///
+    /// # Parámetros
+    ///
+    /// * `operator` - El operador de la expresión.
+    /// * `left` - El resultado de la evaluación del lado izquierdo de la expresión.
+    /// * `right` - El resultado de la evaluación del lado derecho de la expresión.
+    ///
+    /// # Retorna
+    ///
+    /// Un `Result` que contiene el resultado de la comparación o un error en caso de que los tipos
+    /// no coincidan.
     fn get_statement_value(
         operator: &ExpressionOperator,
         left: ExpressionResult,
@@ -76,6 +113,18 @@ impl ExpressionNode {
         }
     }
 
+    /// Obtiene el valor de una variable a partir del `HashMap` de valores.
+    /// Dicho `HashMap`vendría a ser el contexto en donde se esta interprentando la
+    /// expresión.
+    ///
+    /// # Parámetros
+    ///
+    /// * `values` - Un `HashMap` que contiene los pares clave, valor del contexto actual.
+    /// * `t` - El token que representa la variable.
+    ///
+    /// # Retorna
+    ///
+    /// Un `Result` que contiene el valor de la variable o un error si la variable no existe.
     pub fn get_variable_value(
         values: &HashMap<String, String>,
         t: &Token,
@@ -93,6 +142,14 @@ impl ExpressionNode {
         }
     }
 
+    /// Obtiene una tupla de los tokens de una declaración que son hojas.
+    /// Este método es usado para representar las actualizaciones de una consulta.
+    /// Ya que una actualización tiene una llave y un valor, nos conviene devolver en un par.
+    ///
+    /// # Retorna
+    ///
+    /// Un `Result` que contiene una tupla con los dos tokens de las hojas o un error si los nodos
+    /// no son hojas.
     pub fn as_leaf_tuple(&self) -> Result<(&Token, &Token), Errored> {
         match self {
             ExpressionNode::Statement { left, right, .. } => match (&**left, &**right) {

@@ -28,6 +28,20 @@ const RESERVED_KEYWORDS: &[&str] = &[
     "NOT",
 ];
 
+/// `Tokenizer` es una estructura que se encarga de analizar y tokenizar un string SQL.
+///
+/// Esta estructura divide un string SQL en tokens basados en los componentes del SQL, como palabras clave,
+/// identificadores, operadores, literales numéricos y de cadena, y paréntesis.
+///
+/// # Ejemplo
+///
+/// ```rust
+/// use rustic_sql::query::tokenizer::Tokenizer;
+/// let sql = "SELECT id FROM table WHERE age > 30";
+/// let mut tokenizer = Tokenizer::new();
+/// let tokens = tokenizer.tokenize(sql).unwrap();
+/// println!("{:?}", tokens);
+/// ```
 #[derive(Default)]
 pub struct Tokenizer {
     i: usize,
@@ -35,6 +49,18 @@ pub struct Tokenizer {
     parenthesis_count: i8,
 }
 
+/// `TokenizerState` representa los posibles estados del `Tokenizer` durante el proceso de tokenización.
+///
+/// Estos estados ayudan a determinar cómo se debe analizar el siguiente carácter en el string SQL.
+///
+/// - `Begin`: Estado inicial antes de comenzar el análisis.
+/// - `IdentifierOrKeyword`: Estado cuando se está analizando un identificador o una palabra clave.
+/// - `Operator`: Estado cuando se está analizando un operador.
+/// - `NumberLiteral`: Estado cuando se está analizando un literal numérico.
+/// - `StringLiteral`: Estado cuando se está analizando una cadena de texto.
+/// - `OpenParenthesis`: Estado cuando se está analizando un paréntesis de apertura.
+/// - `CloseParenthesis`: Estado cuando se está analizando un paréntesis de cierre.
+/// - `Complete`: Estado cuando el token actual ha sido completado.
 #[derive(Default)]
 enum TokenizerState {
     #[default]
@@ -49,6 +75,14 @@ enum TokenizerState {
 }
 
 impl Tokenizer {
+    /// Crea una nueva instancia de `Tokenizer`.
+    ///
+    /// # Ejemplo
+    ///
+    /// ```rust
+    /// use rustic_sql::query::tokenizer::Tokenizer;
+    /// let tokenizer = Tokenizer::new();
+    /// ```
     pub fn new() -> Self {
         Self {
             i: 0,
@@ -57,6 +91,21 @@ impl Tokenizer {
         }
     }
 
+    /// Tokeniza un string SQL en una lista de `Token`.
+    ///
+    /// # Ejemplo
+    ///
+    /// ```rust
+    /// use rustic_sql::query::tokenizer::Tokenizer;
+    /// let sql = "SELECT id FROM table WHERE age > 30";
+    /// let mut tokenizer = Tokenizer::new();
+    /// let tokens = tokenizer.tokenize(sql).unwrap();
+    /// println!("{:?}", tokens);
+    /// ```
+    ///
+    /// # Errores
+    ///
+    /// Retorna un error si se encuentra un carácter no reconocido o si hay paréntesis no balanceados.
     pub fn tokenize(&mut self, sql: &str) -> Result<Vec<Token>, Errored> {
         let mut out = vec![];
         let mut token = Token::default();
@@ -88,6 +137,11 @@ impl Tokenizer {
         Ok(out)
     }
 
+    /// Cambia el estado del `Tokenizer` basado en el carácter actual.
+    ///
+    /// # Errores
+    ///
+    /// Retorna un error si el carácter no se puede tokenizar.
     fn next_state(&mut self, c: char) -> Result<(), Errored> {
         match c {
             c if can_be_skipped(c) => self.i += c.len_utf8(),
@@ -107,6 +161,13 @@ impl Tokenizer {
         Ok(())
     }
 
+    /// Tokeniza un paréntesis, ya sea de apertura o de cierre.
+    ///
+    /// Dependiendo del carácter, el token se establece como `ParenthesisOpen` o `ParenthesisClose`.
+    ///
+    /// # Errores
+    ///
+    /// Retorna un error si el carácter no es un paréntesis reconocido.
     fn tokenize_parenthesis(&mut self, sql: &str) -> Result<Token, Errored> {
         let c = char_at(self.i, sql);
         let mut token = Token::default();
@@ -126,6 +187,14 @@ impl Tokenizer {
         Ok(token)
     }
 
+    /// Tokeniza un identificador o una palabra clave.
+    ///
+    /// Si el texto coincide con una palabra clave reservada, se tokeniza como `Keyword`. De lo contrario,
+    /// se tokeniza como `Identifier`.
+    ///
+    /// # Errores
+    ///
+    /// Retorna un error si el texto no puede ser tokenizado.
     fn tokenize_identifier_or_keyword(&mut self, sql: &str) -> Result<Token, Errored> {
         if let Some(word) = self.matches_keyword(sql) {
             self.i += word.len();
@@ -138,10 +207,24 @@ impl Tokenizer {
         self.tokenize_kind(sql, Identifier, is_identifier_char)
     }
 
+    /// Tokeniza un literal numérico.
+    ///
+    /// Se tokeniza el texto como `Number` si corresponde a un literal numérico.
+    ///
+    /// # Errores
+    ///
+    /// Retorna un error si el texto no puede ser tokenizado.
     fn tokenize_number(&mut self, sql: &str) -> Result<Token, Errored> {
         self.tokenize_kind(sql, Number, |c| c.is_ascii_digit())
     }
 
+    /// Tokeniza un operador.
+    ///
+    /// Se tokeniza el texto como `Operator` si corresponde a un operador válido.
+    ///
+    /// # Errores
+    ///
+    /// Retorna un error si el operador no es reconocido.
     fn tokenize_operator(&mut self, sql: &str) -> Result<Token, Errored> {
         if let Some(op) = self.matches_operator(sql) {
             self.i += op.len();
@@ -160,6 +243,13 @@ impl Tokenizer {
         }
     }
 
+    /// Tokeniza una cadena de texto entre comillas simples.
+    ///
+    /// Extrae el contenido entre las comillas simples y lo tokeniza como `String`.
+    ///
+    /// # Errores
+    ///
+    /// Retorna un error si las comillas no están balanceadas.
     fn tokenize_quoted(&mut self, sql: &str) -> Result<Token, Errored> {
         let start = self.i;
         for (index, char) in sql[start..].char_indices() {
@@ -177,14 +267,32 @@ impl Tokenizer {
         errored!(Syntax, "unclosed quotation mark after index: {start}");
     }
 
+    /// Busca una palabra clave en el string SQL.
+    ///
+    /// Verifica si el texto actual coincide con alguna de las palabras clave reservadas.
+    ///
     fn matches_keyword(&self, sql: &str) -> Option<String> {
         self.matches_special_tokens(sql, RESERVED_KEYWORDS, is_identifier_char)
     }
 
+    /// Busca un operador en la cadena SQL.
+    ///
+    /// Verifica si el texto actual coincide con algún operador válido.
+    ///
     fn matches_operator(&self, sql: &str) -> Option<String> {
         self.matches_special_tokens(sql, VALID_OPERATORS, is_operator_char)
     }
 
+    /// Busca tokens especiales en la consulta SQL.
+    ///
+    /// Compara el texto actual con una lista de tokens especiales (palabras clave, operadores) y verifica si
+    /// el siguiente carácter no coincide con el tipo esperado.
+    ///
+    /// En caso de que el siguiente caracter a el token evaluado actualmente no coincida en tipo,
+    /// es un indicador de que ya podemos dejar de matchear el token.
+    ///
+    ///
+    ///
     fn matches_special_tokens<F>(
         &self,
         sql: &str,
@@ -208,6 +316,10 @@ impl Tokenizer {
         None
     }
 
+    /// Tokeniza un tipo de dato específico (identificador, número, etc.) en la cadena SQL.
+    ///
+    /// Se tokeniza el texto como el tipo de dato especificado si el carácter actual coincide con el tipo de
+    /// dato esperado.
     fn tokenize_kind<F>(
         &mut self,
         sql: &str,
@@ -231,23 +343,38 @@ impl Tokenizer {
         })
     }
 
+    /// Restablece el estado del `Tokenizer` al estado inicial.
+    ///
+    /// Esto se usa para preparar el `Tokenizer` para el próximo token después de completar el actual.
     fn reset(&mut self) {
         self.state = Begin
     }
 }
 
+/// Obtiene el carácter en el índice dado de un string.
 fn char_at(index: usize, string: &str) -> char {
     string[index..].chars().next().unwrap_or('\0')
 }
 
+/// Determina si un carácter puede ser ignorado.
+///
+/// Los caracteres ignorables son aquellos que no afectan el análisis del SQL,
+/// como espacios y delimitadores.
 fn can_be_skipped(c: char) -> bool {
     c.is_whitespace() || IGNORABLE_CHARS.contains(&c)
 }
 
+/// Determina si un carácter es válido para un identificador o variable.
+///
+/// Los identificadores pueden comenzar con letras o guiones bajos, seguidos
+/// de letras, dígitos o guiones bajos.
 fn is_identifier_char(c: char) -> bool {
     c == '_' || (c.is_alphanumeric() && !can_be_skipped(c))
 }
 
+/// Determina si un carácter es un operador válido.
+///
+/// Los operadores válidos son aquellos definidos en `VALID_OPERATORS`.
 fn is_operator_char(c: char) -> bool {
     VALID_OPERATORS.contains(&c.to_string().as_str())
 }

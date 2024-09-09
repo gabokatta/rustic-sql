@@ -11,6 +11,22 @@ use std::cmp::Ordering;
 use std::io::{BufRead, BufReader};
 
 impl Executor {
+    /// Ejecuta la operación de selección de registros en la tabla especificada.
+    /// # Proceso
+    ///
+    /// 1. Abre el archivo de la tabla especificada.
+    /// 2. Lee el encabezado del archivo para obtener los nombres de las columnas.
+    /// 3. Valida las columnas de proyección especificadas en la consulta SQL.
+    /// 4. Lee y procesa cada línea del archivo:
+    ///    - Divide la línea en campos y los convierte en una fila (`Row`).
+    ///    - Verifica si la fila cumple con las condiciones de la consulta.
+    /// 5. Ordena las filas coincidentes según los criterios de ordenamiento.
+    /// 6. Imprime el encabezado y las filas coincidentes en la salida estándar.
+    ///
+    /// # Errores
+    ///
+    /// Puede retornar un error si ocurre un problema al abrir el archivo de la tabla, leer el encabezado,
+    /// procesar las líneas, validar las columnas de proyección o realizar el ordenamiento.
     pub fn run_select(&mut self) -> Result<(), Errored> {
         let table = get_table_file(&self.table_path)?;
         let mut reader = BufReader::new(&table);
@@ -32,6 +48,19 @@ impl Executor {
         Ok(())
     }
 
+    /// Ordena las filas coincidentes según los criterios de ordenamiento especificados en la consulta.
+    ///
+    /// Este método toma las filas coincidentes y las ordena en función de los campos y el tipo de ordenamiento
+    /// especificados en `self.query.ordering`. Verifica si los campos de ordenamiento existen en el encabezado
+    /// de la tabla y realiza la comparación correspondiente.
+    ///
+    /// # Errores
+    ///
+    /// Retorna un error si alguno de los campos de ordenamiento no existe en el encabezado.
+    ///
+    /// # Ejemplo
+    ///
+    /// Este método es llamado internamente por `run_select`, por lo que no tiene un ejemplo de uso independiente.
     fn sort_rows(&mut self, matched_rows: &mut [Row], header: &[String]) -> Result<(), Errored> {
         for order in &self.query.ordering {
             if !header.contains(&order.field.value) {
@@ -58,12 +87,32 @@ impl Executor {
         Ok(())
     }
 
+    /// Imprime las filas coincidentes en la salida estándar.
+    ///
+    /// Este método toma las filas coincidentes y las imprime en la salida estándar, proyectando solo las columnas
+    /// especificadas en la consulta SQL (`self.query.columns`).
+    ///
+    /// # Ejemplo
+    ///
+    /// Este método es llamado internamente por `run_select`, por lo que no tiene un ejemplo de uso independiente.
     fn output_rows(&self, matched_rows: &[Row]) {
         for row in matched_rows {
             row.print_projection(&self.query.columns)
         }
     }
 
+    /// Valida que todas las columnas especificadas en la proyección existan en el encabezado de la tabla.
+    ///
+    /// Este método verifica que todas las columnas que se desean proyectar en la consulta SQL (`self.query.columns`)
+    /// estén presentes en el encabezado del archivo de la tabla. Si alguna columna no existe, retorna un error.
+    ///
+    /// # Errores
+    ///
+    /// Retorna un error si alguna columna en la proyección no existe en el encabezado.
+    ///
+    /// # Ejemplo
+    ///
+    /// Este método es llamado internamente por `run_select`, por lo que no tiene un ejemplo de uso independiente.
     fn validate_projection(&self, header: &[String]) -> Result<(), Errored> {
         for column in &self.query.columns {
             let value = &column.value;

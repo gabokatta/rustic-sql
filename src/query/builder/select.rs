@@ -12,15 +12,34 @@ const ALLOWED_KEYWORDS: &[&str] = &[
     "SELECT", "FROM", "WHERE", "ORDER BY", "ASC", "DESC", "AND", "OR", "NOT",
 ];
 
+/// Esta estructura procesa los tokens de una consulta SQL y construye una consulta SELECT
+/// con las columnas, la tabla, las condiciones y el orden especificados.
 pub struct SelectBuilder {
     tokens: VecDeque<Token>,
 }
 
 impl SelectBuilder {
+    /// Crea una nueva instancia de `SelectBuilder` con los tokens proporcionados.
+    ///
+    /// # Parámetros
+    /// - `tokens`: Un `VecDeque<Token>` que contiene los tokens de la consulta.
+    ///
+    /// # Retorna
+    /// - Una instancia de `SelectBuilder`.
     pub fn new(tokens: VecDeque<Token>) -> Self {
         Self { tokens }
     }
 
+    /// Analiza y extrae las expresiones de ordenamiento de la consulta.
+    ///
+    /// Este método procesa los tokens después de la cláusula `ORDER BY` y construye
+    /// una lista de ordenamientos basados en los campos y la dirección (ASC o DESC).
+    ///
+    /// # Retorna
+    /// - Un `Result` que contiene un vector de `Ordering` representando las expresiones de ordenamiento.
+    ///
+    /// # Errores
+    /// - Retorna un error si se encuentra un token inesperado en la fase de ordenamiento.
     fn parse_ordering(&mut self) -> Result<Vec<Ordering>, Errored> {
         let mut ordering = vec![];
         while let Some(t) = self.tokens.pop_front() {
@@ -47,6 +66,17 @@ impl SelectBuilder {
 }
 
 impl Builder for SelectBuilder {
+    /// Construye una consulta de tipo SELECT a partir de los tokens.
+    ///
+    /// Este método analiza los tokens para identificar las columnas, la tabla,
+    /// las condiciones y las expresiones de ordenamiento de la consulta.
+    ///
+    /// # Retorna
+    /// - Un `Result` que contiene la consulta `Query` si se construye exitosamente.
+    ///
+    /// # Errores
+    /// - Retorna un error si la consulta no está correctamente formada o si se detectan
+    ///   palabras clave inválidas.
     fn build(&mut self) -> Result<Query, Errored> {
         let mut query = Query::default();
         self.validate_keywords()?;
@@ -66,10 +96,24 @@ impl Builder for SelectBuilder {
         Ok(query)
     }
 
+    /// Retorna una referencia mutable a los tokens que se están procesando.
+    ///
+    /// # Retorna
+    /// - Una referencia mutable a `VecDeque<Token>`.
     fn tokens(&mut self) -> &mut VecDeque<Token> {
         &mut self.tokens
     }
 
+    /// Valida que las palabras clave usadas en la consulta sean válidas para una consulta SELECT.
+    ///
+    /// Este método compara las palabras clave en los tokens con las permitidas para asegurarse
+    /// de que la consulta sea válida.
+    ///
+    /// # Retorna
+    /// - `Ok(())` si las palabras clave son válidas.
+    ///
+    /// # Errores
+    /// - Retorna un error si se detecta una palabra clave inválida en la consulta.
     fn validate_keywords(&self) -> Result<(), Errored> {
         validate_keywords(ALLOWED_KEYWORDS, &self.tokens, Select)
     }
