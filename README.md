@@ -18,7 +18,7 @@ ___
 >```
 ___
 > [!NOTE]
-> Leer la [documentación](https://gabokatta.github.io/rustic-sql/rustic-sql/index.html)
+> Leer la [documentación](https://gabokatta.github.io/rustic-sql/index.html)
 >```BASH
 >cargo doc --open
 >```
