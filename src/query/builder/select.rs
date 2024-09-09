@@ -72,3 +72,113 @@ impl Builder for SelectBuilder {
         validate_keywords(ALLOWED_KEYWORDS, &self.tokens, Select)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::query::structs::expression::ExpressionNode::Empty;
+    use crate::query::structs::operation::Operation::Select;
+    use crate::query::structs::ordering::OrderKind::{Asc, Desc};
+    use crate::query::structs::ordering::Ordering;
+    use crate::query::structs::query::Query;
+    use crate::query::structs::token::TokenKind::Identifier;
+    use crate::query::structs::token::{Token, TokenKind};
+    use crate::query::tokenizer::Tokenizer;
+
+    fn tokenize(sql: &str) -> Vec<Token> {
+        let mut tokenizer = Tokenizer::new();
+        tokenizer.tokenize(sql).unwrap()
+    }
+
+    fn to_token(value: &str, kind: TokenKind) -> Token {
+        Token {
+            value: value.to_string(),
+            kind,
+        }
+    }
+
+    #[test]
+    fn test_select_basic() {
+        let sql = "SELECT id, producto FROM ordenes";
+        let tokens = tokenize(sql);
+        let query = Query::from(tokens).unwrap();
+
+        assert_eq!(query.operation, Select);
+        assert_eq!(
+            query.columns,
+            vec![to_token("id", Identifier), to_token("producto", Identifier),]
+        );
+        assert_eq!(query.table, "ordenes");
+        assert_eq!(query.conditions, Empty);
+        assert!(query.ordering.is_empty());
+    }
+
+    #[test]
+    fn test_select_with_conditions() {
+        let sql = "SELECT id, producto, cantidad FROM ordenes WHERE cantidad > 30";
+        let tokens = tokenize(sql);
+        let query = Query::from(tokens).unwrap();
+
+        assert_eq!(query.operation, Select);
+        assert_eq!(
+            query.columns,
+            vec![
+                to_token("id", Identifier),
+                to_token("producto", Identifier),
+                to_token("cantidad", Identifier),
+            ]
+        );
+        assert_eq!(query.table, "ordenes");
+        assert_ne!(query.conditions, Empty);
+        assert!(query.ordering.is_empty());
+    }
+
+    #[test]
+    fn test_select_with_ordering() {
+        let sql = "SELECT id, producto FROM ordenes ORDER BY id DESC, producto";
+        let tokens = tokenize(sql);
+        let query = Query::from(tokens).unwrap();
+
+        assert_eq!(query.operation, Select);
+        assert_eq!(
+            query.columns,
+            vec![to_token("id", Identifier), to_token("producto", Identifier),]
+        );
+        assert_eq!(query.table, "ordenes");
+        assert_eq!(query.conditions, Empty);
+        assert_eq!(query.ordering.len(), 2);
+        assert_eq!(
+            query.ordering[0],
+            Ordering {
+                field: to_token("id", Identifier),
+                kind: Desc,
+            }
+        );
+        assert_eq!(
+            query.ordering[1],
+            Ordering {
+                field: to_token("producto", Identifier),
+                kind: Asc,
+            }
+        );
+    }
+
+    #[test]
+    fn test_select_invalid_keyword() {
+        let sql = "SELECT id, name FROM users ORDER BY id DESC VALUES";
+        let tokens = tokenize(sql);
+        let result = Query::from(tokens);
+
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("VALUES"));
+    }
+
+    #[test]
+    fn test_select_missing_from() {
+        let sql = "SELECT id, name users";
+        let tokens = tokenize(sql);
+        let result = Query::from(tokens);
+
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("FROM"));
+    }
+}

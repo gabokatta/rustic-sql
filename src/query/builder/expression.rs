@@ -119,3 +119,145 @@ impl ExpressionBuilder {
         Ok(op)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::query::structs::token::TokenKind::*;
+    use crate::query::structs::token::{Token, TokenKind};
+    use std::ops::Deref;
+
+    fn create_token(kind: TokenKind, value: &str) -> Token {
+        Token {
+            kind,
+            value: value.to_string(),
+        }
+    }
+
+    fn operator_should_be(node: &ExpressionNode, op: ExpressionOperator) {
+        match node {
+            ExpressionNode::Statement { operator, .. } => {
+                assert_eq!(*operator, op);
+            }
+            Empty => {
+                if op != None {
+                    panic!("Expected a None operator but got {:?}", op)
+                }
+            }
+            _ => panic!("Expected an {:?} expression", op),
+        }
+    }
+
+    fn leaves_should_have_op(
+        node: ExpressionNode,
+        l_op: ExpressionOperator,
+        r_op: ExpressionOperator,
+    ) {
+        match node {
+            ExpressionNode::Statement { left, right, .. } => {
+                operator_should_be(left.deref(), l_op);
+                operator_should_be(right.deref(), r_op);
+            }
+            _ => panic!("Expected an OR expression"),
+        }
+    }
+
+    #[test]
+    fn test_parse_or_expression() {
+        let mut tokens = VecDeque::from(vec![
+            create_token(Identifier, "x"),
+            create_token(Keyword, "="),
+            create_token(Number, "1"),
+            create_token(Keyword, "OR"),
+            create_token(Identifier, "y"),
+            create_token(Keyword, "="),
+            create_token(Number, "2"),
+        ]);
+
+        let result = ExpressionBuilder::parse_expressions(&mut tokens).unwrap();
+        operator_should_be(&result, Or);
+        leaves_should_have_op(result, Equals, Equals);
+    }
+
+    #[test]
+    fn test_parse_and_expression() {
+        let mut tokens = VecDeque::from(vec![
+            create_token(Identifier, "x"),
+            create_token(Keyword, "="),
+            create_token(Number, "1"),
+            create_token(Keyword, "AND"),
+            create_token(Identifier, "y"),
+            create_token(Keyword, "="),
+            create_token(Number, "2"),
+        ]);
+
+        let result = ExpressionBuilder::parse_expressions(&mut tokens).unwrap();
+        operator_should_be(&result, And);
+        leaves_should_have_op(result, Equals, Equals);
+    }
+
+    #[test]
+    fn test_parse_not_expression() {
+        let mut tokens = VecDeque::from(vec![
+            create_token(Keyword, "NOT"),
+            create_token(ParenthesisOpen, "("),
+            create_token(Identifier, "x"),
+            create_token(Keyword, "="),
+            create_token(Number, "1"),
+            create_token(ParenthesisClose, ")"),
+        ]);
+
+        let result = ExpressionBuilder::parse_expressions(&mut tokens).unwrap();
+        operator_should_be(&result, Not);
+        leaves_should_have_op(result, Equals, None)
+    }
+
+    #[test]
+    fn test_parse_comparison_expression() {
+        let mut tokens = VecDeque::from(vec![
+            create_token(Identifier, "x"),
+            create_token(Keyword, ">"),
+            create_token(Number, "10"),
+        ]);
+
+        let result = ExpressionBuilder::parse_expressions(&mut tokens).unwrap();
+        operator_should_be(&result, GreaterThan)
+    }
+
+    #[test]
+    fn test_parse_complex_expression() {
+        let mut tokens = VecDeque::from(vec![
+            create_token(Identifier, "x"),
+            create_token(Keyword, "="),
+            create_token(Number, "1"),
+            create_token(Keyword, "AND"),
+            create_token(ParenthesisOpen, "("),
+            create_token(Identifier, "y"),
+            create_token(Keyword, "="),
+            create_token(Number, "2"),
+            create_token(Keyword, "OR"),
+            create_token(Keyword, "NOT"),
+            create_token(Identifier, "z"),
+            create_token(Keyword, "="),
+            create_token(Number, "3"),
+            create_token(ParenthesisClose, ")"),
+        ]);
+
+        let result = ExpressionBuilder::parse_expressions(&mut tokens).unwrap();
+        operator_should_be(&result, And);
+        leaves_should_have_op(result, Equals, Or);
+    }
+
+    #[test]
+    fn test_parse_invalid_token() {
+        let mut tokens = VecDeque::from(vec![
+            create_token(Keyword, "INVALID"),
+            create_token(Identifier, "x"),
+            create_token(Keyword, "="),
+            create_token(Number, "1"),
+        ]);
+
+        let result = ExpressionBuilder::parse_expressions(&mut tokens);
+        assert!(result.is_err());
+    }
+}

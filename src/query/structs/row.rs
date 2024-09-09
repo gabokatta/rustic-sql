@@ -19,7 +19,7 @@ impl<'a> Row<'a> {
         }
     }
 
-    fn insert(&mut self, key: &str, value: String) -> Result<(), Errored> {
+    fn set(&mut self, key: &str, value: String) -> Result<(), Errored> {
         if self.header.contains(&key.to_string()) {
             self.values.insert(key.to_string(), value);
         } else {
@@ -35,7 +35,7 @@ impl<'a> Row<'a> {
 
     pub fn clear(&mut self) -> Result<(), Errored> {
         for key in self.header {
-            self.insert(key, "".to_string())?
+            self.set(key, "".to_string())?
         }
         Ok(())
     }
@@ -45,7 +45,7 @@ impl<'a> Row<'a> {
             if let Ok((field, value)) = up.as_leaf_tuple() {
                 let k = &field.value;
                 let v = &value.value;
-                self.insert(k, v.to_string())?
+                self.set(k, v.to_string())?
             } else {
                 errored!(Default, "error while updating values.")
             }
@@ -53,7 +53,7 @@ impl<'a> Row<'a> {
         Ok(())
     }
 
-    pub fn read_new_values(&mut self, values: Vec<String>) -> Result<(), Errored> {
+    pub fn read_new_row(&mut self, values: Vec<String>) -> Result<(), Errored> {
         if self.header.len() != values.len() {
             errored!(
                 Table,
@@ -63,14 +63,14 @@ impl<'a> Row<'a> {
             );
         }
         for (key, value) in self.header.iter().zip(values) {
-            self.insert(key, value)?;
+            self.set(key, value)?;
         }
         Ok(())
     }
 
     pub fn insert_values(&mut self, columns: &[Token], values: Vec<String>) -> Result<(), Errored> {
         for (col, value) in columns.iter().zip(values) {
-            self.insert(&col.value, value)?
+            self.set(&col.value, value)?
         }
         Ok(())
     }
@@ -93,5 +93,143 @@ impl<'a> Row<'a> {
             ExpressionResult::Bool(b) => Ok(b),
             _ => errored!(Syntax, "query condition evaluates to non-boolean value."),
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::query::structs::expression::{ExpressionNode, ExpressionOperator};
+    use crate::query::structs::token::Token;
+    use crate::query::structs::token::TokenKind::*;
+
+    #[test]
+    fn test_initializing() {
+        let header = vec!["id".to_string(), "apellido".to_string()];
+        let row = Row::new(&header);
+        assert_eq!(row.header, &header);
+        assert_eq!(row.values.len(), 0);
+    }
+
+    #[test]
+    fn test_insert_valid_column() {
+        let header = vec!["id".to_string(), "apellido".to_string()];
+        let mut row = Row::new(&header);
+        assert!(row.set("id", "123".to_string()).is_ok());
+        assert_eq!(row.values.get("id").unwrap(), "123");
+    }
+
+    #[test]
+    fn test_insert_invalid_column() {
+        let header = vec!["id".to_string(), "apellido".to_string()];
+        let mut row = Row::new(&header);
+        assert!(row.set("nombre", "gabriel".to_string()).is_err());
+    }
+
+    #[test]
+    fn test_clear() {
+        let header = vec!["id".to_string(), "apellido".to_string()];
+        let mut row = Row::new(&header);
+        row.set("id", "123".to_string()).unwrap();
+        row.clear().unwrap();
+        assert_eq!(row.values.get("id").unwrap(), "");
+        assert_eq!(row.values.get("apellido").unwrap(), "");
+    }
+
+    #[test]
+    fn test_apply_updates() {
+        let header = vec!["id".to_string(), "apellido".to_string()];
+        let mut row = Row::new(&header);
+
+        let field = Token {
+            kind: Identifier,
+            value: "id".to_string(),
+        };
+        let value = Token {
+            kind: String,
+            value: "360".to_string(),
+        };
+        let update = ExpressionNode::Statement {
+            operator: ExpressionOperator::Equals,
+            left: Box::new(ExpressionNode::Leaf(field)),
+            right: Box::new(ExpressionNode::Leaf(value)),
+        };
+
+        row.apply_updates(&vec![update]).unwrap();
+        assert_eq!(row.values.get("id").unwrap(), "360");
+    }
+
+    #[test]
+    fn test_read_new_values() {
+        let header = vec!["id".to_string(), "apellido".to_string()];
+        let mut row = Row::new(&header);
+        let values = vec!["360".to_string(), "katta".to_string()];
+
+        row.read_new_row(values).unwrap();
+        assert_eq!(row.values.get("id").unwrap(), "360");
+        assert_eq!(row.values.get("apellido").unwrap(), "katta");
+    }
+
+    #[test]
+    fn test_read_new_values_mismatch_length() {
+        let header = vec!["id".to_string(), "apellido".to_string()];
+        let mut row = Row::new(&header);
+        let values = vec!["365".to_string()]; // only one value instead of two
+        assert!(row.read_new_row(values).is_err());
+    }
+
+    #[test]
+    fn test_insert_values() {
+        let header = vec!["id".to_string(), "apellido".to_string()];
+        let mut row = Row::new(&header);
+        let columns = vec![
+            Token {
+                kind: Identifier,
+                value: "id".to_string(),
+            },
+            Token {
+                kind: Identifier,
+                value: "apellido".to_string(),
+            },
+        ];
+        let values = vec!["360".to_string(), "katta".to_string()];
+
+        row.insert_values(&columns, values).unwrap();
+        assert_eq!(row.values.get("id").unwrap(), "360");
+        assert_eq!(row.values.get("apellido").unwrap(), "katta");
+    }
+
+    #[test]
+    fn test_as_csv_string() {
+        let header = vec!["id".to_string(), "apellido".to_string()];
+        let mut row = Row::new(&header);
+        row.set("id", "360".to_string()).unwrap();
+        row.set("apellido", "katta".to_string()).unwrap();
+
+        let csv_string = row.as_csv_string();
+        assert_eq!(csv_string, "360,katta");
+    }
+
+    #[test]
+    fn test_matches_condition() {
+        let header = vec!["id".to_string()];
+        let mut row = Row::new(&header);
+        row.set("id", "365".to_string()).unwrap();
+        let condition = ExpressionNode::Statement {
+            operator: ExpressionOperator::GreaterThan,
+            left: Box::new(ExpressionNode::Leaf(Token {
+                kind: Identifier,
+                value: "id".to_string(),
+            })),
+            right: Box::new(ExpressionNode::Leaf(Token {
+                kind: Number,
+                value: "360".to_string(),
+            })),
+        };
+        let query = Query {
+            conditions: condition,
+            ..Query::default()
+        };
+        assert!(row.matches_condition(&query).unwrap());
     }
 }

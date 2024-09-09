@@ -67,3 +67,84 @@ impl Builder for UpdateBuilder {
         validate_keywords(ALLOWED_KEYWORDS, &self.tokens, Update)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::query::structs::expression::ExpressionNode::Empty;
+    use crate::query::structs::expression::{ExpressionNode, ExpressionOperator};
+    use crate::query::structs::operation::Operation::Update;
+    use crate::query::structs::query::Query;
+    use crate::query::structs::token::TokenKind::{Identifier, Number};
+    use crate::query::structs::token::{Token, TokenKind};
+    use crate::query::tokenizer::Tokenizer;
+
+    fn tokenize(sql: &str) -> Vec<Token> {
+        let mut tokenizer = Tokenizer::new();
+        tokenizer.tokenize(sql).unwrap()
+    }
+
+    fn to_token(value: &str, kind: TokenKind) -> Token {
+        Token {
+            value: value.to_string(),
+            kind,
+        }
+    }
+
+    #[test]
+    fn test_update_simple() {
+        let sql = "UPDATE ordenes SET id = 5";
+        let tokens = tokenize(sql);
+        let query = Query::from(tokens).unwrap();
+
+        assert_eq!(query.operation, Update);
+        assert_eq!(query.table, "ordenes");
+        assert_eq!(
+            query.updates,
+            vec![ExpressionNode::Statement {
+                operator: ExpressionOperator::Equals,
+                left: Box::new(ExpressionNode::Leaf(to_token("id", Identifier))),
+                right: Box::new(ExpressionNode::Leaf(to_token("5", Number))),
+            }]
+        );
+        assert_eq!(query.conditions, Empty);
+    }
+
+    #[test]
+    fn test_update_with_conditions() {
+        let sql = "UPDATE ordenes SET cantidad = 5 WHERE id = 1";
+        let tokens = tokenize(sql);
+        let query = Query::from(tokens).unwrap();
+
+        assert_eq!(query.operation, Update);
+        assert_eq!(query.table, "ordenes");
+        assert_eq!(
+            query.updates,
+            vec![ExpressionNode::Statement {
+                operator: ExpressionOperator::Equals,
+                left: Box::new(ExpressionNode::Leaf(to_token("cantidad", Identifier))),
+                right: Box::new(ExpressionNode::Leaf(to_token("5", Number))),
+            }]
+        );
+        assert_ne!(query.conditions, Empty);
+    }
+
+    #[test]
+    fn test_update_invalid_keyword() {
+        let sql = "UPDATE ordenes SET quantity = 5 ORDER BY id";
+        let tokens = tokenize(sql);
+        let result = Query::from(tokens);
+
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("ORDER BY"));
+    }
+
+    #[test]
+    fn test_update_missing_set() {
+        let sql = "UPDATE ordenes quantity = 5";
+        let tokens = tokenize(sql);
+        let result = Query::from(tokens);
+
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("SET"));
+    }
+}

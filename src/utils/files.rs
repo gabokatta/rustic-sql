@@ -79,3 +79,84 @@ pub fn validate_path(dir: &str) -> Result<&Path, Errored> {
     }
     Ok(path)
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_extract_header() {
+        let file = File::open("tests/tables/ordenes.csv").unwrap();
+        let mut reader = BufReader::new(&file);
+        let header = extract_header(&mut reader).unwrap();
+        assert_eq!(header, vec!["id", "id_cliente", "producto", "cantidad"]);
+    }
+
+    #[test]
+    fn test_split_csv() {
+        let line = "id, id_cliente ,      email ";
+        let result = split_csv(line);
+        assert_eq!(result, vec!["id", "id_cliente", "email"]);
+    }
+
+    #[test]
+    fn test_get_bad_table_path() {
+        let dir = Path::new("/dir/sin_tablas");
+        let table_name = "ordenes";
+        let result = get_table_path(dir, table_name);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_get_temp_file() {
+        let table_name = "ordenes";
+        let table_path = Path::new("tests/tables");
+        let result = get_temp_file(table_name, table_path);
+        assert!(result.is_ok());
+        let (_, temp_path) = result.unwrap();
+        fs::remove_file(temp_path).unwrap();
+    }
+
+    #[test]
+    fn test_delete_temp_file() {
+        let table_path = Path::new("tests/tables/ordenes.csv");
+        let (_, t_path) = get_temp_file("ordenes", table_path).unwrap();
+        fs::copy(table_path, &t_path).unwrap();
+        let result = delete_temp_file(table_path, &t_path);
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_delete_non_temporary_file_error() {
+        let table_path = Path::new("tests/tablas/ordenes.csv");
+        let temp_path = Path::new("tests/tablas/clientes.csv");
+        let result = delete_temp_file(table_path, temp_path);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_get_bad_table_file() {
+        let table_path = Path::new("/dir/tablas/no_existo.csv");
+        let result = get_table_file(table_path);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_validate_path_success() {
+        let path = Path::new("tests/tables");
+        let result = validate_path(path.to_str().unwrap());
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_validate_path_not_exist() {
+        let result = validate_path("/dir/sin_tablas/");
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_validate_path_not_a_directory() {
+        let result = validate_path("/test/tables/clientes.csv");
+        assert!(result.is_err());
+    }
+}

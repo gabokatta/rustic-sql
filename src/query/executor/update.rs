@@ -18,7 +18,7 @@ impl Executor {
             let l = line?;
             let fields = split_csv(&l);
             let mut row = Row::new(&header);
-            row.read_new_values(fields)?;
+            row.read_new_row(fields)?;
             if row.matches_condition(&self.query)? {
                 row.apply_updates(&self.query.updates)?;
                 writeln!(writer, "{}", row.as_csv_string())?

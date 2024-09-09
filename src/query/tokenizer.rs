@@ -192,11 +192,12 @@ impl Tokenizer {
         F: Fn(char) -> bool,
     {
         for t in tokens {
+            let t = t.to_uppercase();
             let end = self.i + t.len();
             if end <= sql.len() {
                 let token = &sql[self.i..end];
                 let next_char = char_at(end, sql);
-                if token.to_uppercase() == t.to_uppercase() && !matches_kind(next_char) {
+                if token.to_uppercase() == t && !matches_kind(next_char) {
                     return Some(token.to_uppercase());
                 }
             }
@@ -246,4 +247,135 @@ fn is_identifier_char(c: char) -> bool {
 
 fn is_operator_char(c: char) -> bool {
     VALID_OPERATORS.contains(&c.to_string().as_str())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::query::structs::token::TokenKind::{
+        Identifier, Keyword, Number, Operator, ParenthesisClose, ParenthesisOpen,
+        String as TokenString,
+    };
+
+    #[test]
+    fn test_tokenize_select() {
+        let sql = "SELECT id, producto, id_cliente FROM ordenes WHERE cantidad > 1;";
+        let mut tokenizer = Tokenizer::new();
+        let tokens = tokenizer.tokenize(sql).unwrap();
+
+        assert_eq!(tokens.len(), 10);
+        assert_eq!(tokens[0].value, "SELECT");
+        assert_eq!(tokens[0].kind, Keyword);
+
+        assert_eq!(tokens[1].value, "id");
+        assert_eq!(tokens[1].kind, Identifier);
+
+        assert_eq!(tokens[2].value, "producto");
+        assert_eq!(tokens[2].kind, Identifier);
+
+        assert_eq!(tokens[3].value, "id_cliente");
+        assert_eq!(tokens[3].kind, Identifier);
+
+        assert_eq!(tokens[4].value, "FROM");
+        assert_eq!(tokens[4].kind, Keyword);
+
+        assert_eq!(tokens[5].value, "ordenes");
+        assert_eq!(tokens[5].kind, Identifier);
+
+        assert_eq!(tokens[6].value, "WHERE");
+        assert_eq!(tokens[6].kind, Keyword);
+
+        assert_eq!(tokens[7].value, "cantidad");
+        assert_eq!(tokens[7].kind, Identifier);
+
+        assert_eq!(tokens[8].value, ">");
+        assert_eq!(tokens[8].kind, Operator);
+
+        assert_eq!(tokens[9].value, "1");
+        assert_eq!(tokens[9].kind, Number);
+    }
+
+    #[test]
+    fn test_tokenize_select_with_parentheses() {
+        let sql = "SELECT id FROM t WHERE (a = 1)";
+        let mut tokenizer = Tokenizer::new();
+        let tokens = tokenizer.tokenize(sql).unwrap();
+
+        assert_eq!(tokens.len(), 10);
+        assert_eq!(tokens[0].value, "SELECT");
+        assert_eq!(tokens[0].kind, Keyword);
+
+        assert_eq!(tokens[1].value, "id");
+        assert_eq!(tokens[1].kind, Identifier);
+
+        assert_eq!(tokens[2].value, "FROM");
+        assert_eq!(tokens[2].kind, Keyword);
+
+        assert_eq!(tokens[3].value, "t");
+        assert_eq!(tokens[3].kind, Identifier);
+
+        assert_eq!(tokens[4].value, "WHERE");
+        assert_eq!(tokens[4].kind, Keyword);
+
+        assert_eq!(tokens[5].value, "(");
+        assert_eq!(tokens[5].kind, ParenthesisOpen);
+
+        assert_eq!(tokens[6].value, "a");
+        assert_eq!(tokens[6].kind, Identifier);
+
+        assert_eq!(tokens[7].value, "=");
+        assert_eq!(tokens[7].kind, Operator);
+
+        assert_eq!(tokens[8].value, "1");
+        assert_eq!(tokens[8].kind, Number);
+
+        assert_eq!(tokens[9].value, ")");
+        assert_eq!(tokens[9].kind, ParenthesisClose);
+    }
+
+    #[test]
+    fn test_tokenize_string_literals() {
+        let sql = "SELECT name FROM users WHERE name = 'Alice'";
+        let mut tokenizer = Tokenizer::new();
+        let tokens = tokenizer.tokenize(sql).unwrap();
+        assert_eq!(tokens.len(), 8);
+        assert_eq!(tokens[7].value, "Alice");
+        assert_eq!(tokens[7].kind, TokenString);
+    }
+
+    #[test]
+    fn test_unclosed_parenthesis_error() {
+        let sql = "SELECT id FROM ordenes WHERE (producto = 'Laptop'";
+        let mut tokenizer = Tokenizer::new();
+        let result = tokenizer.tokenize(sql);
+        assert!(result.is_err());
+        if let Err(e) = result {
+            assert!(e.to_string().contains("unclosed parentheses found."));
+        }
+    }
+
+    #[test]
+    fn test_unrecognized_char_error() {
+        let sql = "SELECT * FROM users WHERE age = @30";
+        let mut tokenizer = Tokenizer::new();
+        let result = tokenizer.tokenize(sql);
+
+        assert!(result.is_err());
+        if let Err(e) = result {
+            assert!(e.to_string().contains("could not tokenize char:"));
+        }
+    }
+
+    #[test]
+    fn test_tokenize_with_operators() {
+        let sql = "SELECT * FROM users WHERE age >= 30";
+        let mut tokenizer = Tokenizer::new();
+        let tokens = tokenizer.tokenize(sql).unwrap();
+
+        assert_eq!(tokens.len(), 8);
+        assert_eq!(tokens[1].value, "*");
+        assert_eq!(tokens[1].kind, Operator);
+        assert_eq!(tokens[6].value, ">=");
+        assert_eq!(tokens[6].kind, Operator);
+    }
 }

@@ -84,3 +84,92 @@ impl Builder for InsertBuilder {
         validate_keywords(ALLOWED_KEYWORDS, &self.tokens, Insert)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::query::structs::token::TokenKind::{Identifier, Number, String};
+    use crate::query::tokenizer::Tokenizer;
+
+    fn tokenize(sql: &str) -> Vec<Token> {
+        let mut tokenizer = Tokenizer::new();
+        tokenizer.tokenize(sql).unwrap()
+    }
+
+    fn to_token(value: &str, kind: TokenKind) -> Token {
+        Token {
+            value: value.to_string(),
+            kind,
+        }
+    }
+
+    #[test]
+    fn test_insert_simple() {
+        let sql = "INSERT INTO ordenes (id, producto) VALUES (1, 'Laptop')";
+        let tokens = tokenize(sql);
+
+        let query = Query::from(tokens).unwrap();
+
+        assert_eq!(query.operation, Insert);
+        assert_eq!(query.table, "ordenes");
+        assert_eq!(
+            query.columns,
+            vec![to_token("id", Identifier), to_token("producto", Identifier)]
+        );
+        assert_eq!(
+            query.inserts,
+            vec![vec![to_token("1", Number), to_token("Laptop", String),]]
+        );
+    }
+
+    #[test]
+    fn test_insert_multiple_values() {
+        let sql = "INSERT INTO ordenes (id, producto) VALUES (1, 'Laptop'), (2, 'PS4');";
+        let tokens = tokenize(sql);
+        let query = Query::from(tokens).unwrap();
+
+        assert_eq!(query.operation, Insert);
+        assert_eq!(query.table, "ordenes");
+        assert_eq!(
+            query.columns,
+            vec![to_token("id", Identifier), to_token("producto", Identifier)]
+        );
+        assert_eq!(
+            query.inserts,
+            vec![
+                vec![to_token("1", Number), to_token("Laptop", String),],
+                vec![to_token("2", Number), to_token("PS4", String),]
+            ]
+        );
+    }
+
+    #[test]
+    fn test_insert_invalid_columns() {
+        let sql = "INSERT INTO ordenes (id, producto) VALUES (1)";
+        let tokens = tokenize(sql);
+        let result = Query::from(tokens);
+        assert!(result.is_err());
+        assert!(result
+            .unwrap_err()
+            .to_string()
+            .contains("expected 2 columns"));
+    }
+
+    #[test]
+    fn test_insert_invalid_keyword() {
+        let sql = "INSERT INTO ordenes (id, producto) VALUES (1, 'LAPTOP') WHERE 1=1";
+        let tokens = tokenize(sql);
+        let result = Query::from(tokens);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("WHERE"));
+    }
+
+    #[test]
+    fn test_insert_invalid_missing_parenthesis() {
+        let sql = "INSERT INTO ordenes id, producto VALUES (1, 'LAPTOP')";
+        let tokens = tokenize(sql);
+        let result = Query::from(tokens);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("expected"));
+    }
+}

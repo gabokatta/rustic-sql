@@ -2,12 +2,13 @@ use crate::query::structs::ordering::OrderKind::Asc;
 use crate::query::structs::token::Token;
 use std::fmt::{Debug, Formatter};
 
+#[derive(PartialEq)]
 pub struct Ordering {
-    pub(crate) field: Token,
-    pub(crate) kind: OrderKind,
+    pub field: Token,
+    pub kind: OrderKind,
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum OrderKind {
     Asc,
     Desc,

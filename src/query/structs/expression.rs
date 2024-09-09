@@ -119,3 +119,157 @@ impl Debug for ExpressionNode {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::query::structs::token::Token;
+    use crate::query::structs::token::TokenKind::*;
+    use std::collections::HashMap;
+
+    #[test]
+    fn test_evaluate_empty_node() {
+        let node = ExpressionNode::Empty;
+        assert_eq!(node.evaluate(&HashMap::new()).unwrap(), Bool(true));
+    }
+
+    #[test]
+    fn test_evaluate_leaf_identifier() {
+        let mut values = HashMap::new();
+        values.insert("id_cliente".to_string(), "123".to_string());
+        let node = ExpressionNode::Leaf(Token {
+            kind: Identifier,
+            value: "id_cliente".to_string(),
+        });
+        assert_eq!(node.evaluate(&values).unwrap(), Int(123));
+    }
+
+    #[test]
+    fn test_evaluate_leaf_string() {
+        let node = ExpressionNode::Leaf(Token {
+            kind: String,
+            value: "buenaaaaas".to_string(),
+        });
+        assert_eq!(
+            node.evaluate(&HashMap::new()).unwrap(),
+            Str("buenaaaaas".to_string())
+        );
+    }
+
+    #[test]
+    fn test_evaluate_leaf_number() {
+        let node = ExpressionNode::Leaf(Token {
+            kind: Number,
+            value: "360".to_string(),
+        });
+        assert_eq!(node.evaluate(&HashMap::new()).unwrap(), Int(360));
+    }
+
+    #[test]
+    fn test_evaluate_invalid_token() {
+        let node = ExpressionNode::Leaf(Token {
+            kind: Keyword,
+            value: "".to_string(),
+        });
+        assert_eq!(node.evaluate(&HashMap::new()).unwrap(), Bool(false));
+    }
+
+    #[test]
+    fn test_evaluate_statement_equal_int() {
+        let left = ExpressionNode::Leaf(Token {
+            kind: Number,
+            value: "360".to_string(),
+        });
+        let right = ExpressionNode::Leaf(Token {
+            kind: Number,
+            value: "360".to_string(),
+        });
+        let node = ExpressionNode::Statement {
+            operator: ExpressionOperator::Equals,
+            left: Box::new(left),
+            right: Box::new(right),
+        };
+        assert_eq!(node.evaluate(&HashMap::new()).unwrap(), Bool(true));
+    }
+
+    #[test]
+    fn test_evaluate_statement_not_equal_str() {
+        let left = ExpressionNode::Leaf(Token {
+            kind: String,
+            value: "rust".to_string(),
+        });
+        let right = ExpressionNode::Leaf(Token {
+            kind: String,
+            value: "gleam".to_string(),
+        });
+        let node = ExpressionNode::Statement {
+            operator: ExpressionOperator::NotEquals,
+            left: Box::new(left),
+            right: Box::new(right),
+        };
+        assert_eq!(node.evaluate(&HashMap::new()).unwrap(), Bool(true));
+    }
+
+    #[test]
+    fn test_get_variable_value_existing() {
+        let mut values = HashMap::new();
+        values.insert("id_cliente".to_string(), "789".to_string());
+        let token = Token {
+            kind: Identifier,
+            value: "id_cliente".to_string(),
+        };
+        assert_eq!(
+            ExpressionNode::get_variable_value(&values, &token).unwrap(),
+            Int(789)
+        );
+    }
+
+    #[test]
+    fn test_get_variable_value_non_existing() {
+        let values = HashMap::new();
+        let token = Token {
+            kind: Identifier,
+            value: "id".to_string(),
+        };
+        assert!(ExpressionNode::get_variable_value(&values, &token).is_err());
+    }
+
+    #[test]
+    fn test_as_leaf_tuple_valid() {
+        let left = ExpressionNode::Leaf(Token {
+            kind: Identifier,
+            value: "id_cliente".to_string(),
+        });
+        let right = ExpressionNode::Leaf(Token {
+            kind: Identifier,
+            value: "360".to_string(),
+        });
+        let node = ExpressionNode::Statement {
+            operator: ExpressionOperator::Equals,
+            left: Box::new(left),
+            right: Box::new(right),
+        };
+        let (l, r) = node.as_leaf_tuple().unwrap();
+        assert_eq!(l.value, "id_cliente");
+        assert_eq!(r.value, "360");
+    }
+
+    #[test]
+    fn test_as_leaf_tuple_invalid() {
+        let left = ExpressionNode::Statement {
+            operator: ExpressionOperator::Equals,
+            left: Box::new(ExpressionNode::Empty),
+            right: Box::new(ExpressionNode::Empty),
+        };
+        let right = ExpressionNode::Leaf(Token {
+            kind: Identifier,
+            value: "col1".to_string(),
+        });
+        let node = ExpressionNode::Statement {
+            operator: ExpressionOperator::Equals,
+            left: Box::new(left),
+            right: Box::new(right),
+        };
+        assert!(node.as_leaf_tuple().is_err());
+    }
+}
