@@ -61,7 +61,6 @@ pub fn split_csv(line: &str) -> Vec<String> {
 /// # Retorna
 ///
 /// Devuelve un `Result` que contiene un `PathBuf` con la ruta al archivo de la tabla si tiene éxito, o un `Errored` en caso de error.
-/// ```
 pub fn get_table_path(dir_path: &Path, table_name: &str) -> Result<PathBuf, Errored> {
     let table_path = dir_path.join(table_name).with_extension(CSV_EXTENSION);
     if !table_path.is_file() {
