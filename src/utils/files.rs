@@ -4,6 +4,7 @@ use crate::utils::errors::Errored::Default;
 use std::fs::File;
 use std::hash::{DefaultHasher, Hash, Hasher};
 use std::io::{BufRead, BufReader};
+use std::io::{Read, Seek, SeekFrom, Write};
 use std::path::{Path, PathBuf};
 use std::{fs, thread};
 
@@ -66,6 +67,20 @@ pub fn delete_temp_file(table_path: &Path, temp_path: &Path) -> Result<(), Error
         }
     }
     fs::rename(temp_path, table_path)?;
+    Ok(())
+}
+
+pub fn make_file_end_in_newline(file: &mut File) -> Result<(), Errored> {
+    file.seek(SeekFrom::End(0))?;
+    if file.metadata()?.len() == 0 {
+        return Ok(());
+    }
+    let mut last_byte = [0; 1];
+    file.seek(SeekFrom::End(-1))?;
+    file.read_exact(&mut last_byte)?;
+    if last_byte[0] != b'\n' {
+        file.write_all(&[b'\n'])?;
+    }
     Ok(())
 }
 

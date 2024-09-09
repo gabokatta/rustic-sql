@@ -57,7 +57,7 @@ impl<'a> Row<'a> {
         if self.header.len() != values.len() {
             errored!(
                 Table,
-                "new row ({}) has less fields than table needs ({}).",
+                "new row has ({}) fields but table needs ({}).",
                 values.len(),
                 self.header.len()
             );
