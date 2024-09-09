@@ -36,12 +36,17 @@ pub fn get_table_path(dir_path: &Path, table_name: &str) -> Result<PathBuf, Erro
     Ok(table_path)
 }
 
-pub fn get_temp_file(table_name: &str, table_path: &Path) -> Result<(File, PathBuf), Errored> {
+pub fn get_temp_id() -> u64 {
     let id = thread::current().id();
     let mut hasher = DefaultHasher::new();
     id.hash(&mut hasher);
+    hasher.finish()
+}
+
+pub fn get_temp_file(table_name: &str, table_path: &Path) -> Result<(File, PathBuf), Errored> {
+    let id = get_temp_id();
     let table_path = table_path
-        .with_file_name(format!("{}_{}", table_name, hasher.finish()))
+        .with_file_name(format!("{}_{}", table_name, id))
         .with_extension(TEMP_EXTENSION);
     Ok((
         File::options()

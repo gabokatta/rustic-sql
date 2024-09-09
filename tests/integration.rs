@@ -13,6 +13,7 @@ fn test_empty_query() {
 fn test_select_no_where() {
     let test = RusticSQLTest::new();
     let query = "SELECT * FROM users";
-    let result = test.run_with_output(query.to_string());
-    println!("{}", result)
+    let expected_rows = 11; //with header
+    let result = test.run_and_get_rows(query.to_string());
+    assert_eq!(expected_rows, result.len());
 }

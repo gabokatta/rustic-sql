@@ -1,4 +1,5 @@
 use rustic_sql::run;
+use rustic_sql::utils::files::get_temp_id;
 use std::error::Error;
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -10,7 +11,8 @@ pub struct RusticSQLTest {
 
 impl RusticSQLTest {
     pub fn new() -> Self {
-        let temp_dir = Path::new("./tests/temp_tables");
+        let path = "./tests/temp_tables_".to_string() + &get_temp_id().to_string();
+        let temp_dir = Path::new(&path);
         if temp_dir.exists() {
             fs::remove_dir_all(temp_dir).expect("failed to clean previous test tables.");
         }
@@ -31,6 +33,10 @@ impl RusticSQLTest {
         }
     }
 
+    pub fn tear_down(&self) {
+        fs::remove_dir_all(&self.temp_dir).expect("failed to clean up test directory");
+    }
+
     pub fn args_for(&self, query: String) -> Vec<String> {
         vec![
             "target/debug/rustic-sql".to_string(),
@@ -43,19 +49,23 @@ impl RusticSQLTest {
         run(self.args_for(query))
     }
 
-    pub fn run_with_output(&self, query: String) -> String {
+    pub fn run_and_get_rows(&self, query: String) -> Vec<String> {
         let args = self.args_for(query);
-        let output =Command::new(&args[0])
+        let output = Command::new(&args[0])
             .arg(&args[1])
             .arg(&args[2])
             .output()
             .unwrap();
-        String::from_utf8(output.stdout).unwrap()
+        let raw = String::from_utf8(output.stdout).unwrap();
+        raw.trim()
+            .split("\n")
+            .map(|s| s.to_string())
+            .collect::<Vec<String>>()
     }
 }
 
 impl Drop for RusticSQLTest {
     fn drop(&mut self) {
-        fs::remove_dir_all(&self.temp_dir).expect("Failed to clean up test directory");
+        self.tear_down()
     }
 }

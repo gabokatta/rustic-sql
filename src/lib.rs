@@ -21,7 +21,6 @@ pub fn run(args: Vec<String>) -> Result<(), Box<dyn Error>> {
 
     let tokens = Tokenizer::new().tokenize(query)?;
     let query = Query::from(tokens)?;
-    println!("\n{:?}", &query);
     Executor::run(path, query)?;
     Ok(())
 }
