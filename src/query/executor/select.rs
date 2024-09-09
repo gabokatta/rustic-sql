@@ -91,24 +91,28 @@ impl Executor {
     /// Este método toma las filas coincidentes y las imprime en la salida estándar, proyectando solo las columnas
     /// especificadas en la consulta SQL (`self.query.columns`).
     ///
+    /// Ademas, se encarga de imprimir la proyección del header del csv.
+    /// Si las columnas proyectadas son vacias, se asume que el operador * esta siendo usado,
+    /// de lo contrario se imprime el header proyectado a las columnas.
+    ///
     /// # Ejemplo
     ///
     /// Este método es llamado internamente por `run_select`, por lo que no tiene un ejemplo de uso independiente.
     fn output_rows(&self, header: &[String], matched_rows: &[Row]) {
-        let mut values = vec![];
+        let mut columns = vec![];
         if self.query.columns.is_empty() {
             println!("{}", header.join(","));
         } else {
-            values = self
+            columns = self
                 .query
                 .columns
                 .iter()
                 .map(|t| t.value.to_string())
                 .collect();
-            println!("{}", values.join(","));
+            println!("{}", columns.join(","));
         }
         for row in matched_rows {
-            row.print_projection(&values)
+            row.print_projection(&columns)
         }
     }
 

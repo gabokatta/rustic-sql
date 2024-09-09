@@ -16,6 +16,15 @@ fn test_insert_user_all_fields() {
 }
 
 #[test]
+fn test_insert_nothing() {
+    let test = RusticSQLTest::default();
+    let query = "INSERT INTO users VALUES (14, 'Solidus Snake', 'solidus.snake@mgs.com', 40)";
+    let result = test.run_for(query.to_string());
+    print!("{:?}", &result);
+    assert!(result.is_err());
+}
+
+#[test]
 fn test_insert_multiple_rows() {
     let test = RusticSQLTest::default();
     let insert_query = "INSERT INTO users (user_id, name, email, age) VALUES (15, 'Raiden', 'raiden@mgs.com', 33), (16, 'Big Boss', 'big.boss@mgs.com', 45)";

@@ -94,6 +94,9 @@ pub trait Builder {
                     }
                 }
                 Keyword if t.value == "FROM" || t.value == "VALUES" => {
+                    if fields.is_empty() {
+                        errored!(Syntax, "read FROM without any * or fields in query.")
+                    }
                     break;
                 }
                 ParenthesisClose => {

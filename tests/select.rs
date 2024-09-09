@@ -64,6 +64,14 @@ fn test_select_with_nested_where() {
 }
 
 #[test]
+fn test_select_with_no_fields() {
+    let test = RusticSQLTest::default();
+    let query = "SELECT  FROM users ORDER BY id WHERE 1=1";
+    let result = test.run_for(query.to_string());
+    assert!(result.is_err())
+}
+
+#[test]
 fn test_select_with_invalid_order_field() {
     let test = RusticSQLTest::default();
     let query = "SELECT user_id, name FROM users ORDER BY psn_id";
