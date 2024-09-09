@@ -86,12 +86,15 @@ impl Default for RusticSQLTest {
         let og_tables_path = Path::new("./tests/integration_tables");
         let pokemons = og_tables_path.join("pokemon.csv");
         let users = og_tables_path.join("users.csv");
+        let people = og_tables_path.join("people.csv");
 
         let temp_orders = temp_dir.join("pokemon.csv");
         let temp_users = temp_dir.join("users.csv");
+        let temp_people = temp_dir.join("people.csv");
 
         fs::copy(pokemons, &temp_orders).expect("failed to copy order table.");
         fs::copy(users, &temp_users).expect("failed to copy user table.");
+        fs::copy(people, &temp_people).expect("failed to copy people table.");
 
         RusticSQLTest {
             temp_dir: temp_dir.to_path_buf(),

@@ -42,6 +42,22 @@ fn test_select_where_with_order_by() {
 }
 
 #[test]
+fn test_select_where_with_multiple_order_by() {
+    let test = RusticSQLTest::default();
+    let query =
+        "SELECT id FROM people WHERE age < 22 and gender = 0 ORDER BY last_name DESC, email";
+    let expected_rows: Vec<String> = [vec!["87"], vec!["75"], vec!["66"], vec!["112"], vec!["79"]]
+        .iter()
+        .map(|r| r.join(","))
+        .collect();
+    let expected_header: String = ["id"].join(",");
+    let result = test.run_and_get_rows(query.to_string());
+
+    assert_eq!(expected_header, result[0]);
+    assert_eq!(expected_rows, result[1..]);
+}
+
+#[test]
 fn test_select_with_nested_where() {
     let test = RusticSQLTest::default();
     let query = "SELECT user_id, name FROM users WHERE age > 30 AND (user_id < 8 OR name = 'Henry Clark') ORDER BY name";
