@@ -82,3 +82,21 @@ impl Debug for Query {
         write!(f, "{}", &self)
     }
 }
+
+#[cfg(test)]
+mod test {
+    use crate::query::structs::query::Query;
+    use crate::query::structs::token::Token;
+    use crate::utils::errors::Errored;
+
+    #[test]
+    fn test_invalid_query() {
+        let tokens = vec![Token::default()];
+        let result = Query::from(tokens);
+        assert!(result.is_err(), "should be errored with unknown token.");
+        match result {
+            Err(Errored::Syntax(msg)) => assert!(msg.contains("valid operation")),
+            _ => panic!("expected syntax error for query starting keyword."),
+        }
+    }
+}
