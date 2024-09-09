@@ -15,7 +15,11 @@ impl RusticSQLTest {
     pub fn assert_row(&self, query: &str, expected_row: &[&str]) {
         let expected_row_str = expected_row.join(",");
         let select_result = self.run_and_get_rows(query.to_string());
-        assert_eq!(select_result[1], expected_row_str);
+        if select_result.len() == 1 {
+            assert_eq!("", expected_row_str);
+        } else {
+            assert_eq!(select_result[1], expected_row_str);
+        }
     }
 
     fn read_table_to_string(&self, table: &String) -> String {
