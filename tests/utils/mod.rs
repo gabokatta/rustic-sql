@@ -1,6 +1,8 @@
+use rustic_sql::run;
+use std::error::Error;
 use std::fs;
 use std::path::{Path, PathBuf};
-use std::process::{Command, Output};
+use std::process::Command;
 
 pub struct RusticSQLTest {
     temp_dir: PathBuf,
@@ -37,13 +39,18 @@ impl RusticSQLTest {
         ]
     }
 
-    pub fn run_with_output(&self, query: String) -> Output {
+    pub fn run_for(&self, query: String) -> Result<(), Box<dyn Error>> {
+        run(self.args_for(query))
+    }
+
+    pub fn run_with_output(&self, query: String) -> String {
         let args = self.args_for(query);
-        Command::new(&args[0])
+        let output =Command::new(&args[0])
             .arg(&args[1])
             .arg(&args[2])
             .output()
-            .unwrap()
+            .unwrap();
+        String::from_utf8(output.stdout).unwrap()
     }
 }
 
